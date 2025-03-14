@@ -1,6 +1,5 @@
 [user]
         name = Tom Kawchak
-        email = thkawcha@microsoft.com
 [commit]
         gpgsign = true
 [core]
