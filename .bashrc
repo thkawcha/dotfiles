@@ -165,10 +165,26 @@ if [[ -n "$SSH_CONNECTION" ]] ;then
         export PINENTRY_USER_DATA="USE_CURSES=1"
 fi
 
+#
+# Meru
+#
+
 # Add meruinsight install location to path
 export PATH=${PATH}:/home/$USER/.local/bin
 
+#
 # Load .bashrc_local file if exists
+#
+
 if [[ -r ~/.bashrc_local ]]; then
     . ~/.bashrc_local
 fi
+
+#
+# NVM Settings
+#
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
