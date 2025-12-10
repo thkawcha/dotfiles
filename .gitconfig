@@ -1,33 +1,36 @@
 [user]
-        name = Tom Kawchak
+	email = thkawcha@microsoft.com
+	name = Tom Kawchak
 [commit]
-        gpgsign = true
+	gpgsign = true
 [core]
-        editor = vim
+	editor = vim
 [push]
-        autosetupremote = true
-        followTags = true
+	autosetupremote = true
+	followTags = true
 [diff]
-        algorithm = histogram
-        colorMoved = plain
-        renames = true
-        mnemonicPrefix = true
+	algorithm = histogram
+	colorMoved = plain
+	renames = true
+	mnemonicPrefix = true
 [branch]
-        sort = -committerdate
+	sort = -committerdate
 [column]
-        ui = auto
+	ui = auto
 [fetch]
-        prune = true
-        pruneTags = true
-        all = true
+	prune = true
+	pruneTags = true
+	all = true
 [rebase]
-        updateRefs = true
-        autoSquash = true
-        autoStash = true
+	updateRefs = true
+	autoSquash = true
+	autoStash = true
 [pull]
-        rebase = true
+	rebase = true
 [tag]
-        sort = version:refname
+	sort = version:refname
 [rerere]
-        enabled = true
-        autoupdate = true
+	enabled = true
+	autoupdate = true
+[gpg]
+	program = gpg
