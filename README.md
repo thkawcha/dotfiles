@@ -33,3 +33,11 @@ OR, maybe this if you are okay overwriting local files
 git checkout -f
 ```
 
+## Git Configuration and Codespaces
+
+Git configuration is stored in `.config/git/config` (the XDG location) instead of `~/.gitconfig`. This avoids overwriting environment-specific settings in codespaces and other managed environments.
+
+Git reads both files with `~/.gitconfig` taking higher priority, so:
+- Your personal defaults (diff, rebase, fetch, etc.) are always available from `.config/git/config`
+- Environment-specific settings in `~/.gitconfig` (e.g. credential helpers) take precedence when present
+
