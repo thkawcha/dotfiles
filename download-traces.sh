@@ -1,20 +1,35 @@
 #!/bin/bash
 set -euo pipefail
 
-DOWNLOAD_PATH="/home/thkawcha/tmp"
-OUTPUT_PATH="/mnt/c/Users/thkawcha/Downloads"
+# Resolve paths relative to the script's location, not the caller's CWD
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-BUILD_NUMBER=$1
-DOWNLOAD_DIR="${DOWNLOAD_PATH}/${BUILD_NUMBER}"
-OUTPUT_DIR="${OUTPUT_PATH}/${BUILD_NUMBER}"
+DOWNLOAD_PATH="${HOME}/tmp"
+REPO_DIR="${SCRIPT_DIR}/meru-test-infra"
 ARTIFACTS="traceviewer,traces,operational-traces,managed-application-traces,unmanaged-application-traces"
+
+# Detect WSL and resolve the Windows user's Downloads folder dynamically
+OUTPUT_PATH=""
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    WIN_USERPROFILE="$(cmd.exe /C "echo %USERPROFILE%" 2>/dev/null | tr -d '\r')" || true
+    if [[ -n "$WIN_USERPROFILE" ]]; then
+        WIN_DOWNLOADS="$(wslpath -u "${WIN_USERPROFILE}")/Downloads"
+        if [[ -d "$WIN_DOWNLOADS" ]]; then
+            OUTPUT_PATH="$WIN_DOWNLOADS"
+        fi
+    fi
+fi
+
+BUILD_NUMBER="${1:?Usage: $0 <build-number> [additional-naming] [artifact-filter]}"
+DOWNLOAD_DIR="${DOWNLOAD_PATH}/${BUILD_NUMBER}"
+OUTPUT_DIR="${OUTPUT_PATH:+${OUTPUT_PATH}/${BUILD_NUMBER}}"
 
 ADDITIONAL_NAMING=${2:-}
 ARTIFACT_FILTER=${3:-}
 
 if [ -n "$ADDITIONAL_NAMING" ]; then
     DOWNLOAD_DIR="${DOWNLOAD_PATH}/${BUILD_NUMBER}-${ADDITIONAL_NAMING}"
-    OUTPUT_DIR="${OUTPUT_PATH}/${BUILD_NUMBER}-${ADDITIONAL_NAMING}"
+    OUTPUT_DIR="${OUTPUT_PATH:+${OUTPUT_PATH}/${BUILD_NUMBER}-${ADDITIONAL_NAMING}}"
 fi
 
 if [ -n "$ARTIFACT_FILTER" ]; then
@@ -22,15 +37,14 @@ if [ -n "$ARTIFACT_FILTER" ]; then
 fi
 
 echo "Downloading build '${BUILD_NUMBER}' traces to '${DOWNLOAD_DIR}'"
-./meru-test-infra/src/test/systemtest/testfx/download-and-extract-diagnostics.sh \
-  --repo ~/meru-test-infra \
+"${REPO_DIR}/src/test/systemtest/testfx/download-and-extract-diagnostics.sh" \
+  --repo "${REPO_DIR}" \
   -p "$BUILD_NUMBER" \
   -d "${DOWNLOAD_DIR}" \
   -a "${ARTIFACTS}"
 echo "Downloaded build '${BUILD_NUMBER}' traces to '${DOWNLOAD_DIR}'"
 
 if [ ! -d "${DOWNLOAD_DIR}/traceviewer" ]; then
-    # Candidate subfolder names to look for
     TRACE_FOLDERS=(
         "traces"
         "operational-traces"
@@ -38,7 +52,7 @@ if [ ! -d "${DOWNLOAD_DIR}/traceviewer" ]; then
         "unmanaged-application-traces"
     )
 
-    existing_paths=()
+    TRACE_CONVERSION_INPUT_FOLDER_LIST=""
     for folder in "${TRACE_FOLDERS[@]}"; do
         full_path="${DOWNLOAD_DIR}/${folder}"
         if [ -d "$full_path" ]; then
@@ -55,13 +69,14 @@ if [ ! -d "${DOWNLOAD_DIR}/traceviewer" ]; then
     meruinsight traces convert-to-text \
         --input-folder-list "${TRACE_CONVERSION_INPUT_FOLDER_LIST}" \
         --output-folder "${DOWNLOAD_DIR}" \
-        --skip-delete-source-files
+        --skip-delete-source-files \
         --num-workers 160
     echo "Traces converted in ${DOWNLOAD_DIR}/traceviewer"
 fi
 
-if [ -d "${DOWNLOAD_DIR}/traceviewer" ]  && [ ! -d "${OUTPUT_DIR}/traceviewer" ]; then
+# Copy to Windows Downloads folder (WSL only)
+if [[ -n "$OUTPUT_DIR" && -d "${DOWNLOAD_DIR}/traceviewer" && ! -d "${OUTPUT_DIR}/traceviewer" ]]; then
     mkdir -p "${OUTPUT_DIR}"
-    echo "Copying traceviewer files to windows filesystem at '${OUTPUT_DIR}/traceviewer'"
+    echo "Copying traceviewer files to Windows filesystem at '${OUTPUT_DIR}/traceviewer'"
     cp -r "${DOWNLOAD_DIR}/traceviewer" "${OUTPUT_DIR}"
 fi
