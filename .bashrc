@@ -138,9 +138,9 @@ fi
 unset SSH_AGENT_PID
 SSH_AGENT_ENV=~/ssh-agent.env
 # import env file and supress error message if it does not exist
-if [ -f ${SSH_AGENT_ENV} ]
+if [ -f "${SSH_AGENT_ENV}" ]
 then
-  source $SSH_AGENT_ENV 2> /dev/null
+  source "${SSH_AGENT_ENV}" 2> /dev/null
 fi
 
 # if we know that ssh-agent was launched before ($SSH_AGENT_PID is set) and process with that pid is running
@@ -151,8 +151,10 @@ then
 else
   # start ssh-agent and save required vars for sharing in $SSH_AGENT_ENV file
   eval $(ssh-agent -s) > /dev/null
-  echo export SSH_AUTH_SOCK=\"$SSH_AUTH_SOCK\" > $SSH_AGENT_ENV
-  echo export SSH_AGENT_PID=$SSH_AGENT_PID >> $SSH_AGENT_ENV
+  ( umask 077
+    echo export SSH_AUTH_SOCK=\"$SSH_AUTH_SOCK\" > "$SSH_AGENT_ENV"
+    echo export SSH_AGENT_PID=$SSH_AGENT_PID >> "$SSH_AGENT_ENV"
+  )
   echo "Started ssh-agent"
 fi
 
