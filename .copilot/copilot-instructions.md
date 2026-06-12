@@ -22,6 +22,8 @@ These are the most constrained development environments. They do have access to 
 
 Commits are signed with GPG keys as per my git configuration. Depending on the environment, I have a GPG passphrase that needs to be entered by me. If you attempt to sign a commit and it is waiting for a gpg passphrase, please tell the user to run the commit commands in a new window. This will refresh the gpg ttl and you will be able to commit after that. DO NOT attempt to bypass commit signing. DO stop what you are doing and tell the user to sign the commit.
 
+**DO NOT** ammend and automatically push commits when making changes that are part of a PR. Changes should always be pushed as part of a new commit when there is a remote branch. The exception is if I tell you to rebase a branch on main or similar.
+
 ## Azure Authentication
 
 Never use `az login --use-device-code`. It is not supported for my account. Use the plain `az login` instead, which will pop up a window in my browser to sign in.
