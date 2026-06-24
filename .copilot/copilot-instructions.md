@@ -1,4 +1,11 @@
-## Personal Copilot Instructions
+# Personal Copilot Instructions
+
+## Preferences
+
+- Always use scripts to build and test when they are available (ex: build.sh and test.sh). Do not roll your own commands to use.
+- Use skills wherever available instead of attempting to carry out actions on your own. (Ex: Do not attempt to download or parse traces on your own.)
+- Always provide hard evidence in the form of traces when investigating isues. You should never present hypotheses as fact without evidence.
+- For each conclusion, link code locations, traces from the logs, and runtime symptoms.
 
 ## Environments
 
