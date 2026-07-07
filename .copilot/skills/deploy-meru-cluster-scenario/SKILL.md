@@ -5,9 +5,10 @@ description: >-
   end-to-end scenario, running the focused deploy-* skills in the right order and
   validating the release-package inputs up front. Use this skill when the user
   asks for a whole outcome rather than a single phase: "deploy a cluster with the
-  core managers only", "deploy a cluster with a VM and an ingress", "stand up a
-  full cluster with all resource providers", "bring up a test cluster for
-  scenario X", or "deploy everything needed to test <component>". It figures out
+  core managers only", "deploy a cluster with a VM and an ingress", "deploy a VM
+  with a block-device volume", "stand up a full cluster with all resource
+  providers", "bring up a test cluster for scenario X", or "deploy everything
+  needed to test <component>". It figures out
   which components a scenario needs and deploys them in dependency order (cluster
   -> core managers -> resource providers -> workloads), skipping phases already
   present. It does NOT build the bits; if the release packages are missing it
@@ -44,8 +45,14 @@ deploy-* skills. The focused skills stay modular; this skill orchestrates them.
 | `bare` | cluster only |
 | `core-managers` | cluster + 6 core managers |
 | `providers` | core-managers + resource providers (default set) |
+| `vm` | providers(network,compute,image) + a plain VM (no ingress) |
 | `vm-with-ingress` | providers(network,compute,image) + a VM with an ingress |
+| `vm-with-volume` | providers(network,compute,image,volume) + a VM with a block-device volume |
 | `full` | core-managers + ALL resource providers |
+
+The `vm*` scenarios accept `--local` (default), `--remote`, or `--image-url URL`
+to choose the VM image source (forwarded to the workloads skill; see
+deploy-meru-workloads "VM image: LOCAL vs REMOTE").
 
 ## Usage
 
@@ -55,10 +62,16 @@ SKILL=~/.copilot/skills/deploy-meru-cluster-scenario/deploy_scenario.sh
 # Core managers only:
 "$SKILL" deploy --scenario core-managers
 
-# VM with 2 cpu + ingress (explicit package dirs):
-"$SKILL" deploy --scenario vm-with-ingress --cpu 2 --mem-mib 2048 \
+# Plain VM sanity test (local image), explicit package dirs:
+"$SKILL" deploy --scenario vm --cpu 2 --mem-mib 2048 \
     --packages-dir /home/me/meru-core/out/release/packages \
     --local-dir /home/me/latest-release-packages
+
+# VM with 2 cpu + ingress, using the remote (meruperi) image:
+"$SKILL" deploy --scenario vm-with-ingress --cpu 2 --mem-mib 2048 --remote
+
+# VM with a block-device volume:
+"$SKILL" deploy --scenario vm-with-volume --cpu 2 --mem-mib 2048
 
 # Full cluster (all RPs), qemu hypervisor:
 "$SKILL" deploy --scenario full --hypervisor QEMU

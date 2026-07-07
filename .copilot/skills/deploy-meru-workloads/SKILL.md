@@ -5,12 +5,14 @@ description: >-
   one-node Meru cluster: vnets, vnics (NICs), ingresses, images, virtual machines,
   and block-device volumes. Use this skill when the user wants to "create a VM",
   "deploy a VM with N cpu", "add an ingress", "create a NIC/vnet/image/volume",
-  "deploy a cluster with a VM and an ingress", or tear those resources down. It
-  generates parameterized resource definitions (matching the shared MnM/testbed
-  shapes) and drives `meructl resource create/start/stop/delete` with the correct
-  type/provider. It can also "produce/build a local VM image" via the Prefab Image
-  Toolset (the `prefab-image` subcommand). Requires the resource providers to be
-  deployed first (use `deploy-meru-resource-providers`); for VMs/NICs/ingresses the
+  "deploy a cluster with a VM and an ingress", "deploy a VM with a block-device
+  volume", or tear those resources down. It generates parameterized resource
+  definitions (matching the shared MnM/testbed shapes) and drives
+  `meructl resource create/start/stop/delete` with the correct type/provider. VM
+  images can come from a LOCAL file:// qcow2 (default) or a REMOTE http(s) image
+  server (`--local` / `--remote`), and it diagnoses source problems for both. It
+  can also "produce/build a local VM image" via the Prefab Image Toolset (the
+  `prefab-image` subcommand). Requires the resource providers to be deployed first (use `deploy-meru-resource-providers`); for VMs/NICs/ingresses the
   `network` and `compute` providers must be deployed, and for volumes the `volume`
   provider.
 ---
@@ -69,12 +71,15 @@ SKILL=~/.copilot/skills/deploy-meru-workloads/create_workload.sh
 "$SKILL" vnet test_vnet [--subnet 192.168.10.0/24] [--gateway 192.168.10.1]
 "$SKILL" nic ip1 --vnet test_vnet [--ingress test_ingress]
 "$SKILL" ingress test_ingress --vnet test_vnet --nic ip1
-"$SKILL" image ubuntu_image [--url file:///var/lib/meru/images/ubuntu.qcow2]
+"$SKILL" image ubuntu_image [--local | --remote | --url <file://…|http(s)://…>]
 "$SKILL" vm vm1 --nic ip1 --image ubuntu_image --cpu 2 --mem-mib 2048 [--volume vol1]
 "$SKILL" volume vol1 [--size-mib 4096]
 
-# One-shot scenario: "VM with N cpu and an ingress" (creates static backends first)
-"$SKILL" vm-with-ingress --name vm1 --cpu 2 --mem-mib 2048 [--skip-backends]
+# One-shot VM scenarios (each creates static backends first; --skip-backends to skip):
+# Use --skip-vnet / --skip-image to reuse an existing shared vnet / image.
+"$SKILL" vm-basic       --name vm1    --cpu 2 --mem-mib 2048 [--local|--remote] [--skip-backends|--skip-vnet|--skip-image]
+"$SKILL" vm-with-ingress --name vm1   --cpu 2 --mem-mib 2048 [--local|--remote] [--skip-backends|--skip-vnet|--skip-image]
+"$SKILL" vm-with-volume  --name vm1_bd --cpu 2 --mem-mib 2048 --size-mib 4096 [--local|--remote] [--skip-backends|--skip-vnet|--skip-image]
 
 # Produce the local OS image (see "Producing a local image" below):
 "$SKILL" prefab-image --output /var/lib/meru/images/ubuntu.qcow2
@@ -84,9 +89,57 @@ SKILL=~/.copilot/skills/deploy-meru-workloads/create_workload.sh
 "$SKILL" delete vm1 --type virtualmachine --provider virtualmachine_provider
 ```
 
-`vm-with-ingress` orchestrates: static backends (local_storage + vm-instance) ->
-vnet -> nic -> ingress (anchored on the nic) -> image -> VM (referencing the nic +
-image). Pass `--skip-backends` to skip the static-backend step.
+The three one-shot VM scenarios mirror the testbed flows:
+- `vm-basic` -> `create_and_start_vm_ip1_ubuntu.sh` (plain VM, no ingress).
+- `vm-with-ingress` -> plain VM + an ingress anchored on the nic.
+- `vm-with-volume` -> `create_and_start_vm_ip1_ubuntu_test_bd_volume.sh` (VM with a
+  block-device CSI volume; needs the `volume` resource provider).
+
+Each orchestrates: static backends (local_storage + vm-instance) -> vnet -> nic
+[-> ingress] -> image [-> volume] -> VM. Pass `--skip-backends` to skip the
+static-backend step, `--skip-vnet` to reuse an existing vnet, and `--skip-image`
+to reuse an existing image (useful against an already-populated cluster: the
+shared `local_storage`/`virtual_machine_instance` backends and `test_vnet`
+typically already exist, and arbitrarily-named `local_storage` backends fail to
+start without host-configured backing storage).
+
+## Operation-failure detection
+
+`meructl` **exits 0 even when a resource operation's status is `Failed`** (the
+failure is only in the response body). The skill inspects each create/start
+response and aborts (non-zero) on a `Failed` status or a populated
+`error_description`, so a failed VM is reported instead of a false "complete".
+Verified end-to-end: a VM create failing binding validation is now surfaced as
+`[meru][ERROR] create of virtualmachine '<name>' failed`.
+
+## VM os_volume `linux_profile` (required by current bits)
+
+Generated VMs include `linux_profile: {}` on the `os_volume`. Current compute
+bits **require** the os_volume to set either `linux_profile` or `windows_profile`
+(binding validation fails with "OS volume must have either a linux_profile or
+windows_profile set" otherwise). Note the older testbed `vm_mriv2_ip1.yaml` omits
+this and would fail on current bits. For SSH provisioning, extend `linux_profile`
+with `user_profiles` (username + `ssh_public_keys_base64`), as in the compute
+`cogs_vm.yaml` / `vm_reliable_os.yaml` templates.
+
+## VM image: LOCAL vs REMOTE
+
+`image` (and the one-shot scenarios) support two image sources:
+
+| Option | Source | When to use |
+| ------ | ------ | ----------- |
+| `--local` (default) | `file://` qcow2 (`MERU_IMAGE_URL` / `MERU_IMAGE_PATH`, default `/var/lib/meru/images/ubuntu.qcow2`) | Offline / no corp network. Build one with `prefab-image`. |
+| `--remote` | http(s) image server (`MERU_REMOTE_IMAGE_URL`, default the internal **meruperi** server the testbed used) | On corp network / VPN; matches the testbed `ubuntu_image.yaml`. |
+| `--url URL` | explicit `file://` or `http(s)://` | Any custom location. |
+
+`create image` pre-flights the source and prints diagnosis hints (it warns, never
+fails):
+- **Local**: missing file -> build with `prefab-image` or pass `--url`; unreadable
+  -> fix perms so the cluster user (`meruuser`) can read it.
+- **Remote**: unreachable -> check corp network/VPN, DNS + port (`curl -I <url>`),
+  whether the image tag still exists, and that the **cluster node** (not just your
+  shell) can reach the server; otherwise switch to `--local`.
+
 
 ## Producing a local image
 

@@ -18,6 +18,10 @@
 # One-node adjustments applied automatically:
 #   - volume-manager replicaCount -> 1
 #   - vm_rp gets VMMD_HYPERVISOR_SEL (HYPERVISOR env, default CHV; CHV or QEMU)
+#   - volume node-agent DATA_PLANE_ENV can be overridden via VOLUME_DATA_PLANE_ENV
+#     (default keeps the shared MnM value "--file-size 32768", file-backed). For
+#     hosts without real block storage, use the testbed's emulated-loopback config:
+#       VOLUME_DATA_PLANE_ENV="--file-size 8192 --cpu-set f --transport-emulated-devices lo --transport-receive-buffers 65536 --transport-send-buffers 65536"
 #
 # Subcommands:
 #   deploy    [components]   Deploy the given components (default: all but volume).
@@ -34,10 +38,14 @@ SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../deploy-meru-cluster/_meru_env.sh"
 
 HYPERVISOR="${HYPERVISOR:-CHV}"
+# Optional override for the block-device data-plane env (volume_node_agent.yaml
+# DATA_PLANE_ENV). Empty keeps the shared MnM value; set it to reproduce the
+# testbed's one-node emulated-loopback config on hosts without real storage.
+VOLUME_DATA_PLANE_ENV="${VOLUME_DATA_PLANE_ENV:-}"
 DEFAULT_COMPONENTS="secret,network,local_storage,compute,image"
 ALL_COMPONENTS="secret,network,local_storage,compute,process,image,volume"
 
-usage() { sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # component|app_name|yaml_basename|enlightened(0/1)   -- in deploy order.
 provider_specs() {
@@ -77,6 +85,13 @@ render_provider_yaml() {
       # Inject the hypervisor selector into the template's environmentVariables.
       if ! grep -q "VMMD_HYPERVISOR_SEL" "$dest"; then
         sed -i -e "s/^\(\s*\)\(environmentVariables:\s*\)$/\1\2\n\1  VMMD_HYPERVISOR_SEL: \"${HYPERVISOR}\"/" "$dest"
+      fi
+      ;;
+    volume_node_agent.yaml)
+      # Optionally override the block-device data-plane env (e.g. to use the
+      # testbed's emulated-loopback config on a host without real storage).
+      if [ -n "$VOLUME_DATA_PLANE_ENV" ]; then
+        sed -i -e "s|^\(\s*DATA_PLANE_ENV:\s*\).*|\1\"${VOLUME_DATA_PLANE_ENV}\"|" "$dest"
       fi
       ;;
   esac

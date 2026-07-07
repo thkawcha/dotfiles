@@ -7,7 +7,9 @@
 #   bare             cluster only (L0 runtime + gateway)
 #   core-managers    bare + the 6 core managers (no resource providers/workloads)
 #   providers        core-managers + resource providers (default RP component set)
+#   vm               providers(network,compute,image) + a plain VM (nic + image, no ingress)
 #   vm-with-ingress  providers(network,compute,image) + a VM with an ingress
+#   vm-with-volume   providers(network,compute,image,volume) + a VM with a BD volume
 #   full             core-managers + ALL resource providers (incl. block-device)
 #
 # Usage:
@@ -24,8 +26,11 @@
 #                          Default: ~/latest-release-packages
 #   --components LIST       override RP component set (providers/full scenarios)
 #   --hypervisor CHV|QEMU  VM hypervisor (default CHV)
-#   --cpu N                VM vCPUs for vm-with-ingress (default 2)
-#   --mem-mib N            VM memory MiB for vm-with-ingress (default 2048)
+#   --cpu N                VM vCPUs for the vm* scenarios (default 2)
+#   --mem-mib N            VM memory MiB for the vm* scenarios (default 2048)
+#   --local                use the LOCAL file:// VM image (default)
+#   --remote               use the REMOTE (meruperi) http VM image
+#   --image-url URL        use an explicit VM image URL
 #   --fresh                force a clean redeploy of the base cluster even if up
 #
 # This skill ONLY orchestrates; each phase is owned by a focused skill:
@@ -44,7 +49,7 @@ MANAGERS_SKILL="${SCRIPT_DIR}/../deploy-meru-core-managers/deploy_core_managers.
 PROVIDERS_SKILL="${SCRIPT_DIR}/../deploy-meru-resource-providers/deploy_resource_providers.sh"
 WORKLOADS_SKILL="${SCRIPT_DIR}/../deploy-meru-workloads/create_workload.sh"
 
-usage() { sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 SCENARIO=""
 COMPONENTS=""
@@ -52,6 +57,7 @@ HYPERVISOR_OPT=""
 CPU=2
 MEM_MIB=2048
 FRESH=0
+IMAGE_OPT=()   # forwarded to the workloads skill (--local | --remote | --image-url URL)
 
 parse_opts() {
   while [ $# -gt 0 ]; do
@@ -63,6 +69,9 @@ parse_opts() {
       --hypervisor)   HYPERVISOR_OPT="$2"; shift 2;;
       --cpu)          CPU="$2"; shift 2;;
       --mem-mib)      MEM_MIB="$2"; shift 2;;
+      --local)        IMAGE_OPT=(--local); shift;;
+      --remote)       IMAGE_OPT=(--remote); shift;;
+      --image-url)    IMAGE_OPT=(--image-url "$2"); shift 2;;
       --fresh)        FRESH=1; shift;;
       *) meru_err "unknown option: $1"; return 2;;
     esac
@@ -122,7 +131,17 @@ phase_providers() {
 
 phase_workload_vm_ingress() {
   meru_log "[workload] creating VM (${CPU} cpu) with ingress ..."
-  "$WORKLOADS_SKILL" vm-with-ingress --cpu "$CPU" --mem-mib "$MEM_MIB"
+  "$WORKLOADS_SKILL" vm-with-ingress --cpu "$CPU" --mem-mib "$MEM_MIB" ${IMAGE_OPT[@]+"${IMAGE_OPT[@]}"}
+}
+
+phase_workload_vm_basic() {
+  meru_log "[workload] creating plain VM (${CPU} cpu) ..."
+  "$WORKLOADS_SKILL" vm-basic --cpu "$CPU" --mem-mib "$MEM_MIB" ${IMAGE_OPT[@]+"${IMAGE_OPT[@]}"}
+}
+
+phase_workload_vm_volume() {
+  meru_log "[workload] creating VM (${CPU} cpu) with a block-device volume ..."
+  "$WORKLOADS_SKILL" vm-with-volume --cpu "$CPU" --mem-mib "$MEM_MIB" ${IMAGE_OPT[@]+"${IMAGE_OPT[@]}"}
 }
 
 cmd_deploy() {
@@ -144,11 +163,23 @@ cmd_deploy() {
       phase_managers || return 1
       phase_providers "${COMPONENTS:-secret,network,local_storage,compute,image}" || return 1
       ;;
+    vm)
+      phase_base || return 1
+      phase_managers || return 1
+      phase_providers "${COMPONENTS:-network,compute,image}" || return 1
+      phase_workload_vm_basic || return 1
+      ;;
     vm-with-ingress)
       phase_base || return 1
       phase_managers || return 1
       phase_providers "${COMPONENTS:-network,compute,image}" || return 1
       phase_workload_vm_ingress || return 1
+      ;;
+    vm-with-volume)
+      phase_base || return 1
+      phase_managers || return 1
+      phase_providers "${COMPONENTS:-network,compute,image,volume}" || return 1
+      phase_workload_vm_volume || return 1
       ;;
     full)
       phase_base || return 1
@@ -173,7 +204,9 @@ Scenarios:
   bare             cluster only
   core-managers    cluster + 6 core managers (no providers/workloads)
   providers        core-managers + resource providers (default set)
+  vm               providers(network,compute,image) + a plain VM (no ingress)
   vm-with-ingress  providers(network,compute,image) + a VM with an ingress
+  vm-with-volume   providers(network,compute,image,volume) + a VM with a BD volume
   full             core-managers + ALL resource providers
 EOF
 }

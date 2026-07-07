@@ -16,19 +16,37 @@
 #   vnet     <name> [--subnet CIDR] [--gateway IP]
 #   nic      <name> --vnet V [--ingress I]
 #   ingress  <name> --vnet V --nic N
-#   image    <name> [--url URL]
+#   image    <name> [--url URL | --local | --remote]
 #   vm       <name> --nic N --image I [--cpu C] [--mem-mib M] [--os-mib M] [--volume VOL]
 #   volume   <name> [--size-mib S]
 #   delete   <name> --type T --provider P
 #   list     --type T --provider P
-#   vm-with-ingress [--name vm1] [--cpu 2] [--mem-mib 2048] [--image-url URL] [--skip-backends]
+#   vm-basic        [--name vm1] [--cpu 2] [--mem-mib 2048] [--local|--remote|--image-url URL]
+#                   [--skip-backends] [--skip-vnet] [--skip-image]
+#                   Orchestrate static-backends + vnet + nic + image + VM (plain VM,
+#                   no ingress; mirrors create_and_start_vm_ip1_ubuntu.sh).
+#   vm-with-ingress [--name vm1] [--cpu 2] [--mem-mib 2048] [--local|--remote|--image-url URL]
+#                   [--skip-backends] [--skip-vnet] [--skip-image]
 #                   Orchestrate static-backends + vnet + nic + ingress + image + VM
 #                   (the "VM with N cpu and an ingress" scenario).
+#   vm-with-volume  [--name vm1_bd] [--cpu 2] [--mem-mib 2048] [--size-mib 4096]
+#                   [--local|--remote|--image-url URL] [--skip-backends] [--skip-vnet] [--skip-image]
+#                   Orchestrate static-backends + vnet + nic + image + BD volume + VM
+#                   (mirrors create_and_start_vm_ip1_ubuntu_test_bd_volume.sh).
 #   prefab-image [--output PATH] [--base IMG|URL] [--toolset DIR|TAR]
 #                [--os-type linux|windows] [-- EXTRA prefab args]
 #                   Produce a local Meru-ready qcow2 by running the Prefab Image
 #                   Toolset (from the release packages) against a base cloud
 #                   image. Default output is the local file:// image path.
+#
+# Image options (LOCAL vs REMOTE):
+#   --local (default) : use the local file:// image (MERU_IMAGE_URL / MERU_IMAGE_PATH,
+#                       default /var/lib/meru/images/ubuntu.qcow2). Build one with
+#                       'prefab-image'. No network needed once produced.
+#   --remote          : pull from an http(s) image server (MERU_REMOTE_IMAGE_URL,
+#                       default the internal meruperi server used by the testbed).
+#                       Needs corp network / VPN; the cluster node must reach it too.
+#   --url URL         : use an explicit file:// or http(s):// URL.
 #
 # Defaults: vnet=test_vnet, nic=ip1, ingress=test_ingress, image=ubuntu_image,
 #           vm=vm1, cpu=2, mem-mib=2048.
@@ -39,33 +57,77 @@ SCRIPT_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../deploy-meru-cluster/_meru_env.sh
 source "${SCRIPT_DIR}/../deploy-meru-cluster/_meru_env.sh"
 
+# LOCAL image option: a file:// qcow2 the cluster user can read (produce it with
+# 'prefab-image'). This is the default.
 DEFAULT_IMAGE_URL="${MERU_IMAGE_URL:-file://${MERU_IMAGE_PATH:-/var/lib/meru/images/ubuntu.qcow2}}"
+# REMOTE image option: pull from an http(s) image server (matches the testbed's
+# ubuntu_image.yaml, which used the internal meruperi server). Used with --remote.
+DEFAULT_REMOTE_IMAGE_URL="${MERU_REMOTE_IMAGE_URL:-http://meruperi.corp.microsoft.com:90/images/ubuntu-22.04-server-cloudimg-amd64.meru_20250904_353526.qcow2}"
 # Base (stock) cloud image used by 'prefab-image' when --base is not given.
 DEFAULT_BASE_IMAGE_URL="${MERU_BASE_IMAGE_URL:-https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img}"
 
 
-usage() { sed -n '2,33p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,52p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# True if a meructl resource-op response body indicates the op failed. meructl
+# exits 0 even when the operation status is "Failed", so we must inspect the
+# response: a "Failed" status or a populated error_description ("error": {...}).
+# (Async states like "Starting"/"Created"/"Started"/"Stopped" are NOT failures.)
+op_indicates_failure() {
+  grep -qE '"type"[[:space:]]*:[[:space:]]*"Fail' <<<"$1" && return 0
+  grep -qE '"error"[[:space:]]*:[[:space:]]*\{' <<<"$1" && return 0
+  return 1
+}
 
 # create_and_start <name> <type> <provider> <yaml_file>
 create_and_start() {
-  local name="$1" rtype="$2" provider="$3" yaml="$4"
+  local name="$1" rtype="$2" provider="$3" yaml="$4" out rc
   meru_log "creating ${rtype} resource '${name}'"
-  meru_meructl resource create --file-path "$yaml" --name "$name" || return 1
+  out="$(meru_meructl resource create --file-path "$yaml" --name "$name" 2>&1)"; rc=$?
+  printf '%s\n' "$out"
+  if [ $rc -ne 0 ] || op_indicates_failure "$out"; then
+    meru_err "create of ${rtype} '${name}' failed (see status/error above)"; return 1
+  fi
   meru_log "starting ${rtype} resource '${name}' (provider ${provider})"
-  meru_meructl resource start --name "$name" --type "$rtype" --provider "$provider" || return 1
+  out="$(meru_meructl resource start --name "$name" --type "$rtype" --provider "$provider" 2>&1)"; rc=$?
+  printf '%s\n' "$out"
+  if [ $rc -ne 0 ] || op_indicates_failure "$out"; then
+    meru_err "start of ${rtype} '${name}' failed (see status/error above)"; return 1
+  fi
 }
 
-# Warn (don't fail) if a file:// image URL points at a missing local file.
-warn_if_missing_local_image() {
+# Pre-flight the image source and print diagnosis hints (warn, never fail).
+# Handles both the LOCAL (file://) and REMOTE (http/https) image options.
+check_image_url() {
   local url="$1"
   case "$url" in
     file://*)
       local path="${url#file://}"
       if [ ! -f "$path" ]; then
-        meru_err "WARNING: local image file not found: ${path}"
-        meru_err "  place a qcow2 image there (readable by the cluster user), or override with"
-        meru_err "  MERU_IMAGE_PATH=<path>, MERU_IMAGE_URL=<url>, or --url <url>."
+        meru_err "WARNING: [local image] file not found: ${path}"
+        meru_err "  Produce one with the 'prefab-image' subcommand, override with"
+        meru_err "  MERU_IMAGE_PATH / MERU_IMAGE_URL / --url, or use the remote option (--remote)."
+      elif [ ! -r "$path" ]; then
+        meru_err "WARNING: [local image] not readable by current user: ${path}"
+        meru_err "  The cluster user (meruuser) must be able to read it; check dir + file perms/owner."
       fi
+      ;;
+    http://*|https://*)
+      # Remote option: quick, non-fatal reachability probe from this shell.
+      if command -v curl >/dev/null 2>&1; then
+        if ! curl -fsI --max-time 8 "$url" >/dev/null 2>&1; then
+          meru_err "WARNING: [remote image] URL not reachable from this shell: ${url}"
+          meru_err "  Diagnose the remote option:"
+          meru_err "   - internal servers (e.g. meruperi.corp.microsoft.com) need corp network / VPN;"
+          meru_err "   - confirm DNS + port:  curl -I '${url}'"
+          meru_err "   - the image path/tag may have rotated on the server;"
+          meru_err "   - the cluster NODE (not just this shell) must also reach the server."
+          meru_err "  If it stays unreachable, switch to the local option: 'prefab-image' then --local."
+        fi
+      fi
+      ;;
+    *)
+      meru_err "WARNING: [image] unrecognized URL scheme (expected file://, http://, https://): ${url}"
       ;;
   esac
 }
@@ -211,6 +273,7 @@ EOF
         type: image
         provider_name: image_resource_plugin
       size_mib: ${os}
+      linux_profile: {}
 EOF
 }
 
@@ -314,11 +377,19 @@ cmd_ingress() {
 
 cmd_image() {
   local name="${1:-ubuntu_image}"; shift || true
-  local url="$DEFAULT_IMAGE_URL"
+  local url="" mode="local"
   while [ $# -gt 0 ]; do case "$1" in
-    --url) url="$2"; shift 2;; *) meru_err "unknown arg: $1"; return 2;; esac; done
+    --url) url="$2"; mode="explicit"; shift 2;;
+    --remote) mode="remote"; shift;;
+    --local) mode="local"; shift;;
+    *) meru_err "unknown arg: $1"; return 2;; esac; done
+  case "$mode" in
+    remote) url="${url:-$DEFAULT_REMOTE_IMAGE_URL}";;
+    local)  url="${url:-$DEFAULT_IMAGE_URL}";;
+  esac
   meru_setup_venv >&2 || return 1
-  warn_if_missing_local_image "$url"
+  meru_log "using ${mode} image source: ${url}"
+  check_image_url "$url"
   local f; f="$(gen_image "$url" | with_tmp_yaml)"
   create_and_start "$name" image image_resource_plugin "$f"; local rc=$?; rm -f "$f"; return $rc
 }
@@ -374,13 +445,18 @@ cmd_list() {
 
 cmd_vm_with_ingress() {
   local vm="vm1" nic="ip1" vnet="test_vnet" ingress="test_ingress" image="ubuntu_image"
-  local cpu=2 mem=2048 url="$DEFAULT_IMAGE_URL" skip_backends=0
+  local cpu=2 mem=2048 url="$DEFAULT_IMAGE_URL"
+  local skip_backends=0 skip_vnet=0 skip_image=0
   while [ $# -gt 0 ]; do case "$1" in
     --name) vm="$2"; shift 2;; --nic) nic="$2"; shift 2;;
     --vnet) vnet="$2"; shift 2;; --ingress) ingress="$2"; shift 2;;
     --image) image="$2"; shift 2;; --cpu) cpu="$2"; shift 2;;
     --mem-mib) mem="$2"; shift 2;; --image-url) url="$2"; shift 2;;
+    --remote) url="$DEFAULT_REMOTE_IMAGE_URL"; shift;;
+    --local)  url="$DEFAULT_IMAGE_URL"; shift;;
     --skip-backends) skip_backends=1; shift;;
+    --skip-vnet) skip_vnet=1; shift;;
+    --skip-image) skip_image=1; shift;;
     *) meru_err "unknown arg: $1"; return 2;; esac; done
   meru_setup_venv >&2 || return 1
   meru_log "=== scenario: VM '${vm}' (${cpu} cpu) with ingress '${ingress}' ==="
@@ -390,12 +466,76 @@ cmd_vm_with_ingress() {
     cmd_local_storage || return 1
     cmd_vm_instance || return 1
   fi
-  cmd_vnet "$vnet" || return 1
+  [ "$skip_vnet" -eq 0 ] && { cmd_vnet "$vnet" || return 1; }
   cmd_nic "$nic" --vnet "$vnet" || return 1
   cmd_ingress "$ingress" --vnet "$vnet" --nic "$nic" || return 1
-  cmd_image "$image" --url "$url" || return 1
+  [ "$skip_image" -eq 0 ] && { cmd_image "$image" --url "$url" || return 1; }
   cmd_vm "$vm" --nic "$nic" --image "$image" --cpu "$cpu" --mem-mib "$mem" || return 1
   meru_log "=== scenario complete: VM '${vm}' + ingress '${ingress}' created ==="
+}
+
+# Plain VM sanity flow (no ingress, no volume): mirrors the testbed's
+# create_and_start_vm_ip1_ubuntu.sh path (static backends -> vnet -> nic ->
+# image -> VM referencing the nic + image).
+cmd_vm_basic() {
+  local vm="vm1" nic="ip1" vnet="test_vnet" image="ubuntu_image"
+  local cpu=2 mem=2048 os=4096 url="$DEFAULT_IMAGE_URL"
+  local skip_backends=0 skip_vnet=0 skip_image=0
+  while [ $# -gt 0 ]; do case "$1" in
+    --name) vm="$2"; shift 2;; --nic) nic="$2"; shift 2;;
+    --vnet) vnet="$2"; shift 2;; --image) image="$2"; shift 2;;
+    --cpu) cpu="$2"; shift 2;; --mem-mib) mem="$2"; shift 2;;
+    --os-mib) os="$2"; shift 2;; --image-url) url="$2"; shift 2;;
+    --remote) url="$DEFAULT_REMOTE_IMAGE_URL"; shift;;
+    --local)  url="$DEFAULT_IMAGE_URL"; shift;;
+    --skip-backends) skip_backends=1; shift;;
+    --skip-vnet) skip_vnet=1; shift;;
+    --skip-image) skip_image=1; shift;;
+    *) meru_err "unknown arg: $1"; return 2;; esac; done
+  meru_setup_venv >&2 || return 1
+  meru_log "=== scenario: plain VM '${vm}' (${cpu} cpu) ==="
+  if [ "$skip_backends" -eq 0 ]; then
+    cmd_local_storage || return 1
+    cmd_vm_instance || return 1
+  fi
+  [ "$skip_vnet" -eq 0 ] && { cmd_vnet "$vnet" || return 1; }
+  cmd_nic "$nic" --vnet "$vnet" || return 1
+  [ "$skip_image" -eq 0 ] && { cmd_image "$image" --url "$url" || return 1; }
+  cmd_vm "$vm" --nic "$nic" --image "$image" --cpu "$cpu" --mem-mib "$mem" --os-mib "$os" || return 1
+  meru_log "=== scenario complete: plain VM '${vm}' created ==="
+}
+
+# VM with a block-device (CSI) volume attached: mirrors the testbed's
+# create_and_start_vm_ip1_ubuntu_test_bd_volume.sh path (adds volume + VM
+# reliable_volumes reference). Requires the 'volume' resource provider.
+cmd_vm_with_volume() {
+  local vm="vm1_bd" nic="ip1" vnet="test_vnet" image="ubuntu_image" volume="test_volume"
+  local cpu=2 mem=2048 os=4096 size_mib=4096 url="$DEFAULT_IMAGE_URL"
+  local skip_backends=0 skip_vnet=0 skip_image=0
+  while [ $# -gt 0 ]; do case "$1" in
+    --name) vm="$2"; shift 2;; --nic) nic="$2"; shift 2;;
+    --vnet) vnet="$2"; shift 2;; --image) image="$2"; shift 2;;
+    --volume) volume="$2"; shift 2;; --cpu) cpu="$2"; shift 2;;
+    --mem-mib) mem="$2"; shift 2;; --os-mib) os="$2"; shift 2;;
+    --size-mib) size_mib="$2"; shift 2;; --image-url) url="$2"; shift 2;;
+    --remote) url="$DEFAULT_REMOTE_IMAGE_URL"; shift;;
+    --local)  url="$DEFAULT_IMAGE_URL"; shift;;
+    --skip-backends) skip_backends=1; shift;;
+    --skip-vnet) skip_vnet=1; shift;;
+    --skip-image) skip_image=1; shift;;
+    *) meru_err "unknown arg: $1"; return 2;; esac; done
+  meru_setup_venv >&2 || return 1
+  meru_log "=== scenario: VM '${vm}' (${cpu} cpu) with block-device volume '${volume}' ==="
+  if [ "$skip_backends" -eq 0 ]; then
+    cmd_local_storage || return 1
+    cmd_vm_instance || return 1
+  fi
+  [ "$skip_vnet" -eq 0 ] && { cmd_vnet "$vnet" || return 1; }
+  cmd_nic "$nic" --vnet "$vnet" || return 1
+  [ "$skip_image" -eq 0 ] && { cmd_image "$image" --url "$url" || return 1; }
+  cmd_volume "$volume" --size-mib "$size_mib" || return 1
+  cmd_vm "$vm" --nic "$nic" --image "$image" --cpu "$cpu" --mem-mib "$mem" --os-mib "$os" --volume "$volume" || return 1
+  meru_log "=== scenario complete: VM '${vm}' + block-device volume '${volume}' created ==="
 }
 
 # ----- prefab-image: produce a local Meru-ready qcow2 via the Prefab Image Toolset -----
@@ -506,6 +646,8 @@ main() {
     delete)          cmd_delete "$@" ;;
     list)            cmd_list "$@" ;;
     vm-with-ingress) cmd_vm_with_ingress "$@" ;;
+    vm-basic)        cmd_vm_basic "$@" ;;
+    vm-with-volume)  cmd_vm_with_volume "$@" ;;
     prefab-image)    cmd_prefab_image "$@" ;;
     ""|-h|--help|help) usage ;;
     *) meru_err "unknown subcommand: $sub"; usage; return 2 ;;
