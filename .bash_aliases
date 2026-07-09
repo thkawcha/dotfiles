@@ -8,3 +8,4 @@ alias l='ls -CF'
 # Custom commands
 alias update="sudo apt-get update && sudo apt-get upgrade"
 alias sync_main="git checkout main && git fetch && git pull && git submodule update --init --recursive && git status"
+alias checkout_submodules="git submodule update --init && ext/build-infra/devcontainer-features/meru-devcontainer-ubuntu/scripts/checkout-submodules.sh"
