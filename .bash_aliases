@@ -9,3 +9,6 @@ alias l='ls -CF'
 alias update="sudo apt-get update && sudo apt-get upgrade"
 alias sync_main="git checkout main && git fetch && git pull && git submodule update --init --recursive && git status"
 alias checkout_submodules="git submodule update --init && ext/build-infra/devcontainer-features/meru-devcontainer-ubuntu/scripts/checkout-submodules.sh"
+
+# Agency install
+alias install_agecy="curl -sSfL https://aka.ms/InstallTool.sh | sh -s agency && exec $SHELL -l"
