@@ -25,6 +25,8 @@ These do not have access to the remote build cache, but they do cache builds loc
 
 These are the most constrained development environments. They do have access to the build cache, but do not have many cores and are somewhat limited in capabilities. They cannot deploy clusters and run end to end tests.
 
+When in WSL, do not attempt to start docker. Prompt the user to start it instead.
+
 ## Commit Signing
 
 Commits are signed with GPG keys as per my git configuration. Depending on the environment, I have a GPG passphrase that needs to be entered by me. If you attempt to sign a commit and it is waiting for a gpg passphrase, please tell the user to run the commit commands in a new window. This will refresh the gpg ttl and you will be able to commit after that. DO NOT attempt to bypass commit signing. DO stop what you are doing and tell the user to sign the commit.
