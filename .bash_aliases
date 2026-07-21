@@ -11,4 +11,4 @@ alias sync_main="git checkout main && git fetch && git pull && git submodule upd
 alias checkout_submodules="git submodule update --init && ext/build-infra/devcontainer-features/meru-devcontainer-ubuntu/scripts/checkout-submodules.sh"
 
 # Agency install
-alias install_agecy="curl -sSfL https://aka.ms/InstallTool.sh | sh -s agency && exec $SHELL -l"
+alias install_agency="curl -sSfL https://aka.ms/InstallTool.sh | sh -s agency && exec $SHELL -l"
