@@ -35,11 +35,11 @@ Commits are signed with GPG keys as per my git configuration. Depending on the e
 
 ## Azure Authentication
 
-Never use `az login --use-device-code`. It is not supported for my account. Use the plain `az login` instead, which will pop up a window in my browser to sign in.
+Never use `az login --use-device-code`. It is not supported for my account. Outside Codespaces, use plain `az login`, which will pop up a browser window to sign in.
 
 ### Codespaces
 
-Codespaces will force a device code flow by default even if that `--use-device-code` argument is not specified. You must force the browser to pop open a window for authentication.
+Azure CLI detects `CODESPACES=true` and forces device code flow even when the VS Code browser bridge is available. Run `CODESPACES=false az login` to force browser authorization. This override must apply only to the login command; do not unset `CODESPACES` globally.
 
 ## Repository Workspaces
 
