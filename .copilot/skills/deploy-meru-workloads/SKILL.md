@@ -1,20 +1,11 @@
 ---
 name: deploy-meru-workloads
 description: >-
-  Create, start, list, and delete user workloads / resources on a running local
-  one-node Meru cluster: vnets, vnics (NICs), ingresses, images, virtual machines,
-  and block-device volumes. Use this skill when the user wants to "create a VM",
-  "deploy a VM with N cpu", "add an ingress", "create a NIC/vnet/image/volume",
-  "deploy a cluster with a VM and an ingress", "deploy a VM with a block-device
-  volume", or tear those resources down. It generates parameterized resource
-  definitions (matching the shared MnM/testbed shapes) and drives
-  `meructl resource create/start/stop/delete` with the correct type/provider. VM
-  images can come from a LOCAL file:// qcow2 (default) or a REMOTE http(s) image
-  server (`--local` / `--remote`), and it diagnoses source problems for both. It
-  can also "produce/build a local VM image" via the Prefab Image Toolset (the
-  `prefab-image` subcommand). Requires the resource providers to be deployed first (use `deploy-meru-resource-providers`); for VMs/NICs/ingresses the
-  `network` and `compute` providers must be deployed, and for volumes the `volume`
-  provider.
+  Create, start, inspect, or explicitly delete local Meru resources including
+  static backends, networks, images, VMs, ingresses, and block-device volumes.
+  Use after the required resource providers are ready. The helper generates
+  parameterized definitions and validates meructl responses.
+allowed-tools: shell
 ---
 
 # deploy-meru-workloads
@@ -23,6 +14,13 @@ Creates and manages user resources on a running local one-node cluster. Resource
 YAMLs are generated (parameterized) and applied with
 `meructl resource create` + `meructl resource start`, using the type/provider
 pairs reported by `meructl resource types`.
+
+## Authority boundary
+
+A workload request authorizes creation of the named local resources and health
+checks. Delete only resources the user explicitly identifies. Building a prefab
+image invokes privileged tooling and may download a base image; require explicit
+prefab-image intent before running it.
 
 ## Prerequisites
 

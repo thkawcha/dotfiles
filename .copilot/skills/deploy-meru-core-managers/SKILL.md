@@ -1,21 +1,21 @@
 ---
 name: deploy-meru-core-managers
 description: >-
-  Deploy (or undeploy) the L2 Meru core managers onto a running local one-node
-  cluster: Instance Set Manager (ISM), Space Scheduler Manager (SSM), Node
-  Manager (NM), Resource Manager (RM), Deployment Manager (DM), and the Secret
-  Store (sstore). Use this skill when the user wants "a cluster with all the core
-  managers deployed only and no user workloads", "deploy the core managers",
-  "bring up ISM/SSM/NM/RM/DM", or "remove the core managers". This skill assumes
-  the bare cluster is already up (use the `deploy-meru-cluster` skill first). It
-  uses the SHARED E2E manager YAMLs (eris apps + mnm common) rather than stale
-  point-in-time copies, substituting one-node values automatically. It does NOT
-  deploy resource providers or user workloads (VMs, ingresses, volumes).
+  Deploy or undeploy the six L2 core managers on a running local one-node Meru
+  cluster using shared E2E/MnM YAMLs with one-node substitutions. Use for ISM,
+  SSM, NM, RM, DM, and sstore only; providers and workloads are separate skills.
+allowed-tools: shell
 ---
 
 # deploy-meru-core-managers
 
 Deploys the six L2 core managers onto an already-running local one-node cluster.
+
+## Authority boundary
+
+A deployment request authorizes creating these six local applications.
+Undeploy only when the user explicitly requests removal or an approved fresh
+scenario; do not use undeploy as an automatic retry strategy.
 
 ## Prerequisites
 

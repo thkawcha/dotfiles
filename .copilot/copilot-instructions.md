@@ -4,7 +4,8 @@
 
 - Always use scripts to build and test when they are available (ex: build.sh and test.sh). Do not roll your own commands to use.
 - Use skills wherever available instead of attempting to carry out actions on your own. (Ex: Do not attempt to download or parse traces on your own.)
-- Always provide hard evidence in the form of traces when investigating isues. You should never present hypotheses as fact without evidence.
+- Provide hard evidence from traces when investigating issues. Do not present
+  hypotheses as facts without evidence.
 - For each conclusion, link code locations, traces from the logs, and runtime symptoms.
 
 ## Environments
@@ -46,4 +47,17 @@ Azure CLI detects `CODESPACES=true` and forces device code flow even when the VS
 - Do not clone a workspace into a new directory without asking, unless specifically instructed by the user. Instead, prefer working in the meru-\* directories that are under the home folder. This is so that any changes play nicely with the incremental build in the existing repositories.
 - If there is unrelated work in the repository that you are instructed to work in, please ask the user what they would like to do with the existing work. Do not clean it up automatically.
 
+## Meru Submodules
+
+- Treat each repository's `.gitmodules` as the source of truth for its top-level
+  dependencies.
+- Never initialize Meru submodules recursively. Recursive checkout creates
+  redundant nested Meru worktrees and pulls unnecessary dependency trees.
+- Initialize top-level submodules from the repository root with
+  `git submodule update --init`.
+- The only supported nested checkout is the networking dependency set:
+  `git -C ext/net/deps submodule update --init`.
+- Alternatively, after `ext/build-infra` is available, run
+  `bash ext/build-infra/devcontainer-features/meru-devcontainer-ubuntu/scripts/checkout-submodules.sh`.
+  It initializes the top level and only `ext/net/deps`.
 

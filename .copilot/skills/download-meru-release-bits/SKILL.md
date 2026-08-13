@@ -1,20 +1,24 @@
 ---
 name: download-meru-release-bits
 description: >-
-  Download the latest Meru release packages (the meru_prod_release_* bits) needed
-  to deploy a local cluster, by invoking the user's
-  ~/download-latest-release-bits.sh. Use this skill when the user wants to
-  "download the latest release bits", "get/refresh the release packages", "grab
-  the deploy bits", "update ~/latest-release-packages", or before deploying a
-  cluster when the release bits are missing or stale. The download lands in
-  ~/latest-release-packages, which is the default `--local-dir` / `MERU_LOCAL_DIR`
-  consumed by the `deploy-meru-cluster` and `deploy-meru-cluster-scenario` skills.
+  Download or refresh the Meru release-package artifact used by local cluster
+  deployment through the user's canonical download script. Use when the user
+  requests release bits or approves refreshing a missing or stale package
+  directory.
+allowed-tools: shell
 ---
 
 # download-meru-release-bits
 
 Thin wrapper around the user's `~/download-latest-release-bits.sh`, which pulls the
 latest successful release-pipeline artifact into `~/latest-release-packages`.
+
+## Authority boundary
+
+A download or refresh request authorizes the helper's destructive replacement
+of `~/latest-release-packages`. Do not download merely because deployment
+preflight reports missing bits; obtain explicit user intent first. Do not
+reimplement or bypass the canonical helper's safeguards.
 
 ## Usage
 

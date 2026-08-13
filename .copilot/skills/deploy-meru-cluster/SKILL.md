@@ -1,19 +1,11 @@
 ---
 name: deploy-meru-cluster
 description: >-
-  Deploy, inspect, and tear down a local single-node Meru cluster for testing
-  operations and validating results against a live cluster. Use this skill when
-  the user wants to "deploy a local meru cluster", "stand up a one-node cluster",
-  "bring up a test cluster", "run a meructl command against a local cluster",
-  "check if my local cluster is up", "wait for an app/manager to be READY", or
-  "tear down the local cluster". This is the FOUNDATION skill: it brings up the
-  bare cluster (core L0 runtime + envoy), sets up the meructl python venv, and is
-  also the entry point for running arbitrary `meructl` operations against the
-  cluster (the venv's meructl, run non-interactively). It does NOT deploy the L2
-  core managers or any user workloads. To deploy the core managers
-  (ISM/SSM/NM/RM/DM/sstore), chain the `deploy-meru-core-managers` skill after
-  this one. Assumes the meru-core release bits are already built into
-  out/release/packages.
+  Manage a bare local one-node Meru cluster: deploy L0 plus envoy, configure the
+  meructl venv, inspect health, run meructl, wait for readiness, or tear down.
+  Use for the cluster foundation only; L2 managers and workloads belong to the
+  sibling deploy skills. Requires compatible prebuilt core and release packages.
+allowed-tools: shell
 ---
 
 # deploy-meru-cluster
@@ -21,6 +13,13 @@ description: >-
 Foundation skill for a local one-node Meru cluster. Wraps the documented manual
 flow (`core-cluster-deployer.sh` + `installer.sh`) so an agent can bring the
 cluster up, talk to it with `meructl`, and tear it down.
+
+## Authority boundary
+
+A deploy request authorizes local cluster creation and required health checks.
+Status, readiness, and `meructl` reads are non-destructive. Tear down only when
+the user explicitly requests teardown or a fresh replacement; do not destroy a
+cluster merely to simplify diagnosis.
 
 ## Prerequisites
 

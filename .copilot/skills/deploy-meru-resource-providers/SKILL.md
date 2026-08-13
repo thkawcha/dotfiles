@@ -1,16 +1,11 @@
 ---
 name: deploy-meru-resource-providers
 description: >-
-  Deploy (or undeploy) Meru resource-provider controllers and plugins onto a
-  running local one-node cluster: network (vnic/vnet/ingress), compute (VM),
-  image, local storage, secret store, and block-device CSI volumes. Use this
-  skill when the user wants to "deploy the resource providers", "set up the
-  compute/network/image plugins", "enable VM/ingress/volume resources", or before
-  creating any user workloads (VMs, NICs, ingresses, volumes). Assumes the bare
-  cluster and core managers are already up (use `deploy-meru-cluster` then
-  `deploy-meru-core-managers` first). It uses the SHARED MnM deployment YAMLs and applies
-  one-node adjustments automatically. It does NOT create resources themselves —
-  that is the `deploy-meru-workloads` skill.
+  Deploy or undeploy local Meru resource-provider controllers and plugins for
+  secret, network, local storage, compute, image, or block-device volume
+  resources. Requires a running bare cluster and core managers, uses shared MnM
+  YAMLs with one-node adjustments, and does not create workloads.
+allowed-tools: shell
 ---
 
 # deploy-meru-resource-providers
@@ -18,6 +13,13 @@ description: >-
 Deploys the resource-provider (RP) controllers + plugins that back user
 resources. Each RP registers providers the `deploy-meru-workloads` skill then uses to
 create resources.
+
+## Authority boundary
+
+A provider deployment request authorizes creating the selected local
+applications. Undeploy only when the user explicitly requests removal or an
+approved fresh scenario. Keep the volume provider opt-in because it changes
+host and kernel prerequisites.
 
 ## Prerequisites
 

@@ -1,26 +1,25 @@
 ---
 name: deploy-meru-cluster-scenario
 description: >-
-  Meta-orchestrator that deploys a local one-node Meru cluster for a named
-  end-to-end scenario, running the focused deploy-* skills in the right order and
-  validating the release-package inputs up front. Use this skill when the user
-  asks for a whole outcome rather than a single phase: "deploy a cluster with the
-  core managers only", "deploy a cluster with a VM and an ingress", "deploy a VM
-  with a block-device volume", "stand up a full cluster with all resource
-  providers", "bring up a test cluster for scenario X", or "deploy everything
-  needed to test <component>". It figures out
-  which components a scenario needs and deploys them in dependency order (cluster
-  -> core managers -> resource providers -> workloads), skipping phases already
-  present. It does NOT build the bits; if the release packages are missing it
-  tells the user to build / specify them. For a single phase, prefer the focused
-  skills (deploy-meru-cluster, deploy-meru-core-managers,
-  deploy-meru-resource-providers, deploy-meru-workloads) directly.
+  Deploy a complete local one-node Meru scenario by orchestrating the focused
+  cluster, core-manager, resource-provider, and workload skills in dependency
+  order. Use for outcome-level requests such as a VM, ingress, volume, or full
+  provider cluster. It validates prebuilt package inputs and does not build
+  missing bits. Use a focused sibling skill for one phase.
+allowed-tools: shell
 ---
 
 # deploy-meru-cluster-scenario
 
 One entry point that maps a high-level scenario to an ordered run of the focused
 deploy-* skills. The focused skills stay modular; this skill orchestrates them.
+
+## Authority boundary
+
+A scenario deployment request authorizes the local creation steps required by
+that scenario. `--fresh`, teardown, resource deletion, package downloads, and
+builds require explicit user intent. Do not infer destructive recovery from a
+failed readiness check; reuse healthy phases by default.
 
 ## How an agent should use it
 
