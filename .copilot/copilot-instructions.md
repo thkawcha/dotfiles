@@ -8,6 +8,13 @@
   hypotheses as facts without evidence.
 - For each conclusion, link code locations, traces from the logs, and runtime symptoms.
 
+## Build Preflight
+
+- Before running any build command or build task in a Meru repository, check whether a local Meru cluster is running. Check `meru_machine_init.service` and fall back to looking for processes under `/opt/microsoft/meru` so a missing or stale service registration does not hide a running cluster.
+- If a cluster is running, stop before starting the build and prompt me to choose whether to clean up the cluster or leave it running during the build. Do not infer a choice and do not clean up the cluster automatically.
+- If I choose cleanup, use the `deploy-meru-cluster` skill and verify the cluster has stopped before building. If I choose to leave it running, continue the build without modifying the cluster.
+- Apply this preflight to all build variants, including normal, clean, package, tidy, ASAN, IWYU, component-specific, CMake, C++, and Rust builds.
+
 ## Environments
 
 I develop on a few different configurations: (Linux Dev Machines, Codespaces, and WSL). Each of these will have slightly different configurations and supported capabilities.
