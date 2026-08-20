@@ -1,0 +1,66 @@
+{
+  "allowedUrls": [
+    "https://docs.github.com",
+    "https://astral.sh",
+    "https://dev.azure.com",
+    "https://github.com",
+    "https://raw.githubusercontent.com",
+    "https://agentskills.io",
+    "https://spsprodwus21.vssps.visualstudio.com"
+  ],
+  "companyAnnouncements": [
+    "GPT-5.6 Sol, Terra, and Luna are now available in Copilot CLI. Try them from the model picker.",
+    "Need help with Agency? Run `agency support` or join the support community: https://aka.ms/agency/support"
+  ],
+  "disabledSkills": [
+    "customize-cloud-agent"
+  ],
+  "logLevel": "all",
+  "renderMarkdown": true,
+  "screenReader": false,
+  "showReasoning": true,
+  "theme": "auto",
+  "effortLevel": "max",
+  "sandbox": {
+    "enabled": true,
+    "sandboxMcpServers": true,
+    "sandboxLspServers": true,
+    "allowBypass": true,
+    "auth": {
+      "git": true,
+      "gh": true
+    },
+    "allowDevToolAccess": true,
+    "addCurrentWorkingDirectory": true,
+    "userPolicy": {
+      "filesystem": {
+        "readwritePaths": [
+          "/home/thkawcha/tmp",
+          "/home/merutest/tmp",
+          "/tmp",
+          "/home/thkawcha/latest-release-packages",
+          "/home/merutest/latest-release-packages",
+          "/home/meruuser",
+          "/mnt/merudataroot",
+          "/mnt/meru-artifacts",
+          "/home/thkawcha/.cache",
+          "/home/merutest/.cache",
+          "/home/thkawcha/.azure",
+          "/home/merutest/.azure",
+          "/home/thkawcha/.copilot",
+          "/home/merutest/.copilot",
+          "/var/run/docker.sock"
+        ],
+        "readonlyPaths": [
+          "/var/crash",
+          "/opt/az"
+        ],
+        "deniedPaths": []
+      },
+      "network": {
+        "allowOutbound": true,
+        "allowLocalNetwork": true
+      }
+    }
+  }
+}
