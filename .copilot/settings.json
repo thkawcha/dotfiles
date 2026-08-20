@@ -13,7 +13,6 @@
     "Need help with Agency? Run `agency support` or join the support community: https://aka.ms/agency/support"
   ],
   "disabledSkills": [
-    "customize-cloud-agent"
   ],
   "logLevel": "all",
   "renderMarkdown": true,

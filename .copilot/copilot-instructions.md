@@ -35,6 +35,8 @@ These are the most constrained development environments. They do have access to 
 
 When in WSL, do not attempt to start docker. Prompt the user to start it instead.
 
+Meru clusters cannot run in WSL so you do not need to check for existence before running builds and other commands. You also will not be able to deploy clusters there right now.
+
 ## Commit Signing
 
 Commits are signed with GPG keys as per my git configuration. Depending on the environment, I have a GPG passphrase that needs to be entered by me. If you attempt to sign a commit and it is waiting for a gpg passphrase, please tell the user to run the commit commands in a new window. This will refresh the gpg ttl and you will be able to commit after that. DO NOT attempt to bypass commit signing. DO stop what you are doing and tell the user to sign the commit.
