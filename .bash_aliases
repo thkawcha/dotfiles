@@ -12,3 +12,4 @@ alias checkout_submodules="git submodule update --init && ext/build-infra/devcon
 
 # Agency install
 alias install_agency="curl -sSfL https://aka.ms/InstallTool.sh | sh -s agency && exec $SHELL -l"
+

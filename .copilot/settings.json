@@ -20,6 +20,7 @@
   "showReasoning": true,
   "theme": "auto",
   "effortLevel": "max",
+  "bashEnv": true,
   "sandbox": {
     "enabled": true,
     "sandboxMcpServers": true,
@@ -45,6 +46,8 @@
           "/home/thkawcha/.cache",
           "/home/merutest/.cache",
           "/home/thkawcha/.azure",
+	  "/home/thkawcha/.cache/uv",
+	  "/home/merutest/.cache/uv",
           "/home/merutest/.azure",
           "/home/thkawcha/.copilot",
           "/home/merutest/.copilot",

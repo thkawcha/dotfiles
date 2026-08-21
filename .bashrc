@@ -95,18 +95,9 @@ fi
 # colored GCC warnings and errors
 #export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
-# some more ls aliases
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-
 #
 # Alias definitions.
 #
-
-# You may want to put all your additions into a separate file like
-# ~/.bash_aliases, instead of adding them here directly.
-# See /usr/share/doc/bash-doc/examples in the bash-doc package.
 
 if [ -f ~/.bash_aliases ]; then
     . ~/.bash_aliases
@@ -168,11 +159,12 @@ if [[ -n "$SSH_CONNECTION" ]] ;then
 fi
 
 #
-# Meru
+# Load shared environment variables.
 #
 
-# Add meruinsight install location to path
-export PATH=${PATH}:/home/$USER/.local/bin
+if [[ -r "$HOME/.bash_env" ]]; then
+    source "$HOME/.bash_env"
+fi
 
 #
 # Load .bashrc_local file if exists

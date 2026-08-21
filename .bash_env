@@ -1,0 +1,8 @@
+# ~/.bash_env
+
+# Added here so tht uv cache is visible inside copilot sandboxes.
+export UV_CACHE_DIR="$HOME/tmp/copilot-uv-cache"
+
+# Add meruinsight install location to path
+export PATH=${PATH}:/home/$USER/.local/bin
+
