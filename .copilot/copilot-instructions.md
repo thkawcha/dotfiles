@@ -43,6 +43,8 @@ Commits are signed with GPG keys as per my git configuration. Depending on the e
 
 **DO NOT** ammend and automatically push commits when making changes that are part of a PR. Changes should always be pushed as part of a new commit when there is a remote branch. The exception is if I tell you to rebase a branch on main or similar.
 
+If commit signing is disabled or unavailable inside a sandbox, stop before creating or pushing a commit. Prompt me to sign the commit or retry the command outside the sandbox so I can approve signing. Never create or push an unsigned commit.
+
 ## Azure Authentication
 
 Never use `az login --use-device-code`. It is not supported for my account. Outside Codespaces, use plain `az login`, which will pop up a browser window to sign in.
