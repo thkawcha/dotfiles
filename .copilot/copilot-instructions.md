@@ -8,6 +8,11 @@
   hypotheses as facts without evidence.
 - For each conclusion, link code locations, traces from the logs, and runtime symptoms.
 
+## Sandboxing
+
+- Python scripts run with uv should set the `UV_CACHE_DIR` to a folder under `~/tmp` since `~/.cache/uv` access is not allowed by the sandbox. This env variable should already be set in the users environment. If not, please set it for the session.
+- When you are able, please work within the sandbox and the allowed paths. Only as a last resort should you prompt the user to go outside the sandbox.
+
 ## Build Preflight
 
 - Before running any build command or build task in a Meru repository, check whether a local Meru cluster is running. Check `meru_machine_init.service` and fall back to looking for processes under `/opt/microsoft/meru` so a missing or stale service registration does not hide a running cluster.

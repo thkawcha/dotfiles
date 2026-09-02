@@ -61,7 +61,9 @@
           "/home/merutest/.azure",
           "/home/thkawcha/.copilot",
           "/home/merutest/.copilot",
-          "/var/run/docker.sock"
+          "/var/run/docker.sock",
+          "/build/out",
+          "/build/src"
         ]
       },
       "network": {
