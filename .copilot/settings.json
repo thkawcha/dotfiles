@@ -14,32 +14,37 @@
     "https://azure.microsoft.com",
     "https://developer.hashicorp.com"
   ],
+  "bashEnv": true,
   "companyAnnouncements": [
     "GPT-5.6 Sol, Terra, and Luna are now available in Copilot CLI. Try them from the model picker.",
-    "Need help with Agency? Run `agency support` or join the support community: https://aka.ms/agency/support"
+    "Need help with Agency? In a local Agency session, use `/agency:agency-support`; otherwise run `agency support` or join the support community: https://aka.ms/agency/support",
+    "Monthly limits are in place. Burst limit increases and guidance are available at https://aka.ms/copilot/burst"
   ],
   "disabledSkills": [],
+  "effortLevel": "max",
   "logLevel": "all",
   "renderMarkdown": true,
-  "screenReader": false,
-  "showReasoning": true,
-  "theme": "auto",
-  "effortLevel": "max",
-  "bashEnv": true,
   "sandbox": {
-    "enabled": true,
-    "sandboxMcpServers": true,
-    "sandboxLspServers": true,
-    "allowBypass": true,
-    "auth": {
-      "git": true,
-      "gh": true
-    },
-    "allowDevToolAccess": true,
     "addCurrentWorkingDirectory": true,
+    "allowBypass": true,
+    "allowDevToolAccess": true,
+    "auth": {
+      "gh": true,
+      "git": true
+    },
+    "enabled": true,
+    "sandboxLspServers": true,
+    "sandboxMcpServers": true,
     "userPolicy": {
       "filesystem": {
+        "deniedPaths": [],
+        "readonlyPaths": [
+          "/var/crash",
+          "/opt/az"
+        ],
         "readwritePaths": [
+          "/home/thkawcha",
+          "/home/merutest",
           "/home/thkawcha/tmp",
           "/home/merutest/tmp",
           "/tmp",
@@ -57,17 +62,15 @@
           "/home/thkawcha/.copilot",
           "/home/merutest/.copilot",
           "/var/run/docker.sock"
-        ],
-        "readonlyPaths": [
-          "/var/crash",
-          "/opt/az"
-        ],
-        "deniedPaths": []
+        ]
       },
       "network": {
-        "allowOutbound": true,
-        "allowLocalNetwork": true
+        "allowLocalNetwork": true,
+        "allowOutbound": true
       }
     }
-  }
+  },
+  "screenReader": false,
+  "showReasoning": true,
+  "theme": "auto"
 }

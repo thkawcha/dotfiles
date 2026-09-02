@@ -191,4 +191,3 @@ if [[ ":${PATH}:" != *":/home/thkawcha/.config/agency/CurrentVersion:"* ]]; then
     export PATH="/home/thkawcha/.config/agency/CurrentVersion:${PATH}"
 fi
 # END Agency MANAGED BLOCK
-
