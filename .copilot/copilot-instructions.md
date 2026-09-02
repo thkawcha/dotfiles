@@ -7,6 +7,8 @@
 - Provide hard evidence from traces when investigating issues. Do not present
   hypotheses as facts without evidence.
 - For each conclusion, link code locations, traces from the logs, and runtime symptoms.
+- When asked to create, edit, or visualize a diagram, use the `mermaid-diagrams`
+  skill.
 
 ## Sandboxing
 
