@@ -13,7 +13,10 @@
     "https://api.github.com",
     "https://azure.microsoft.com",
     "https://developer.hashicorp.com",
-    "https://cli.github.com"
+    "https://cli.github.com",
+    "https://azure.archive.ubuntu.com",
+    "https://index.crates.io",
+    "https://docs.docker.com"
   ],
   "bashEnv": true,
   "companyAnnouncements": [

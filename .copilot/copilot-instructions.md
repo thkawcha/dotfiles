@@ -46,11 +46,20 @@ Meru clusters cannot run in WSL so you do not need to check for existence before
 
 ## Commit Signing
 
-Commits are signed with GPG keys as per my git configuration. Depending on the environment, I have a GPG passphrase that needs to be entered by me. If you attempt to sign a commit and it is waiting for a gpg passphrase, please tell the user to run the commit commands in a new window. This will refresh the gpg ttl and you will be able to commit after that. DO NOT attempt to bypass commit signing. DO stop what you are doing and tell the user to sign the commit.
+Commits must be signed with the GPG key from my git configuration. If a signed
+commit fails because the sandbox cannot access GPG, immediately retry the exact
+signing command outside the sandbox using the approval prompt so I can authorize
+it. Do not first ask me to run the commit in another window, and never bypass
+signing or create or push an unsigned commit.
 
-**DO NOT** ammend and automatically push commits when making changes that are part of a PR. Changes should always be pushed as part of a new commit when there is a remote branch. The exception is if I tell you to rebase a branch on main or similar.
+If the approved outside-sandbox command still needs a GPG passphrase, stop and
+ask me to refresh the GPG agent TTL by signing in another window, then retry the
+signed command.
 
-If commit signing is disabled or unavailable inside a sandbox, stop before creating or pushing a commit. Prompt me to sign the commit or retry the command outside the sandbox so I can approve signing. Never create or push an unsigned commit.
+**DO NOT** amend and automatically push commits when making changes that are
+part of a PR. Changes should always be pushed as part of a new commit when there
+is a remote branch. The exception is if I tell you to rebase a branch on main
+or similar.
 
 ## Azure Authentication
 
@@ -78,4 +87,3 @@ Azure CLI detects `CODESPACES=true` and forces device code flow even when the VS
 - Alternatively, after `ext/build-infra` is available, run
   `bash ext/build-infra/devcontainer-features/meru-devcontainer-ubuntu/scripts/checkout-submodules.sh`.
   It initializes the top level and only `ext/net/deps`.
-
