@@ -16,12 +16,14 @@
     "https://cli.github.com",
     "https://azure.archive.ubuntu.com",
     "https://index.crates.io",
-    "https://docs.docker.com"
+    "https://docs.docker.com",
+    "https://aka.ms"
   ],
   "bashEnv": true,
   "companyAnnouncements": [
     "GPT-5.6 Sol, Terra, and Luna are now available in Copilot CLI. Try them from the model picker.",
-    "Need help with Agency? Run `agency support` or join the support community: https://aka.ms/agency/support"
+    "Need help with Agency? In a local Agency session, use `/agency:agency-support`; otherwise run `agency support` or join the support community: https://aka.ms/agency/support",
+    "Monthly limits are in place. Burst limit increases and guidance are available at https://aka.ms/copilot/burst"
   ],
   "disabledSkills": [],
   "effortLevel": "max",
