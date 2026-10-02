@@ -26,7 +26,7 @@
     "Monthly limits are in place. Burst limit increases and guidance are available at https://aka.ms/copilot/burst"
   ],
   "disabledSkills": [],
-  "effortLevel": "max",
+  "effortLevel": "high",
   "logLevel": "all",
   "renderMarkdown": true,
   "sandbox": {
@@ -79,5 +79,21 @@
   },
   "screenReader": false,
   "showReasoning": true,
-  "theme": "auto"
+  "theme": "auto",
+  "model": "gpt-6-luna",
+  "planModel": "gpt-6.1-sol",
+  "planEffortLevel": "extra high",
+  "planContextTier": "long_context",
+  "includeCoAuthoredBy": false,
+  "voice": {
+    "enabled": true,
+    "selectedModel": "nemotron-3.5-asr-streaming-0.6b-generic-cpu:3"
+  },
+  "subagents": {
+    "maxConcurrency": 5,
+    "maxDepth": 2,
+    "contextManagementTools": false
+  },
+  "contextTier": "default",
+  "editorMode": "normal"
 }
