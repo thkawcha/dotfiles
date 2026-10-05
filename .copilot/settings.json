@@ -17,7 +17,9 @@
     "https://azure.archive.ubuntu.com",
     "https://index.crates.io",
     "https://docs.docker.com",
-    "https://aka.ms"
+    "https://aka.ms",
+    "https://files.pythonhosted.org",
+    "https://packagefeedproxy.microsoft.io"
   ],
   "bashEnv": true,
   "companyAnnouncements": [

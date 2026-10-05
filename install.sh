@@ -137,6 +137,11 @@ fi
 
 while IFS= read -r relative_path; do
     [[ -n "$relative_path" ]] || continue
+    if [[ "${CODESPACES:-}" == "true" && "$relative_path" == ".config/git/config" ]]; then
+        printf 'skipped: ~/%s (Codespaces manages Git configuration)\n' "$relative_path"
+        skipped_count=$((skipped_count + 1))
+        continue
+    fi
     link_managed_path "$relative_path"
 done <<< "$managed_paths"
 

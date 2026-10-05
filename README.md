@@ -59,6 +59,13 @@ git checkout -f
 
 Git configuration is stored in `.config/git/config` (the XDG location) instead of `~/.gitconfig`. This avoids overwriting environment-specific settings in codespaces and other managed environments.
 
-Git reads both files with `~/.gitconfig` taking higher priority, so:
+Outside Codespaces, the installer links this file like the other dotfiles,
+including its existing `gpg.program=gpg` setting. Git reads both files with
+`~/.gitconfig` taking higher priority, so:
 - Your personal defaults (diff, rebase, fetch, etc.) are always available from `.config/git/config`
 - Environment-specific settings in `~/.gitconfig` (e.g. credential helpers) take precedence when present
+
+When `CODESPACES=true`, the installer skips `.config/git/config` entirely and
+does not modify Git settings. Codespaces' existing author and signing settings
+are preserved. Any Git configuration already present is left untouched,
+including links created by previous installations.
