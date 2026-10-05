@@ -265,6 +265,8 @@ def observe(
     pipeline = definition.get("name") if isinstance(definition, dict) else None
     repository = build.get("repository")
     repository_name = repository.get("name") if isinstance(repository, dict) else None
+    if repository_name is None and isinstance(repository, dict):
+        repository_name = repository.get("id")
     repository_type = repository.get("type") if isinstance(repository, dict) else None
     source_branch = build.get("sourceBranch")
     source_version = build.get("sourceVersion")
