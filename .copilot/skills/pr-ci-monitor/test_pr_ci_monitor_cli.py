@@ -153,6 +153,8 @@ class ObservationTests(unittest.TestCase):
             {"name": monitor.REPOSITORY, "type": "TfsGit"},
             {"name": monitor.REPOSITORY},
             {"name": None, "type": "GitHub"},
+            {"id": "microsoft/another-repo", "name": None, "type": "GitHub"},
+            {"id": monitor.REPOSITORY, "name": "microsoft/another-repo", "type": "GitHub"},
         ):
             with self.subTest(repository=repository):
                 self.build_reader.read.return_value = self.build | {
@@ -167,6 +169,18 @@ class ObservationTests(unittest.TestCase):
         self.build["repository"]["name"] = monitor.REPOSITORY.upper()
         _, code = self.observe()
         self.assertIsNone(code)
+
+    def test_github_repository_id_fills_missing_name(self):
+        for repository_id in (monitor.REPOSITORY, monitor.REPOSITORY.upper()):
+            with self.subTest(repository_id=repository_id):
+                self.build["repository"] = {
+                    "id": repository_id,
+                    "name": None,
+                    "type": "GitHub",
+                }
+                observation, code = self.observe()
+                self.assertIsNone(code)
+                self.assertEqual(observation["outcome"], "running")
 
     def test_other_build_association_changes_are_rejected(self):
         for changes in (
