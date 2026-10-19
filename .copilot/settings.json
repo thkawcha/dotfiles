@@ -57,6 +57,8 @@
           "/tmp",
           "/home/thkawcha/latest-release-packages",
           "/home/merutest/latest-release-packages",
+	  "/home/thkawcha/meru*",
+	  "/home/merutest/meru*",
           "/home/meruuser",
           "/mnt/merudataroot",
           "/mnt/meru-artifacts",
