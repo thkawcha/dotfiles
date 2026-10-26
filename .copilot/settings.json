@@ -23,25 +23,31 @@
   ],
   "bashEnv": true,
   "companyAnnouncements": [
-    "GPT-5.6 Sol, Terra, and Luna are now available in Copilot CLI. Try them from the model picker.",
     "Need help with Agency? In a local Agency session, use `/agency:agency-support`; otherwise run `agency support` or join the support community: https://aka.ms/agency/support",
     "Monthly limits are in place. Burst limit increases and guidance are available at https://aka.ms/copilot/burst"
   ],
+  "contextTier": "default",
   "disabledSkills": [],
+  "editorMode": "normal",
   "effortLevel": "high",
+  "includeCoAuthoredBy": false,
   "logLevel": "all",
+  "model": "gpt-6-luna",
+  "planContextTier": "long_context",
+  "planEffortLevel": "extra high",
+  "planModel": "gpt-6.1-sol",
   "renderMarkdown": true,
   "sandbox": {
-    "addCurrentWorkingDirectory": true,
-    "allowBypass": true,
-    "allowDevToolAccess": true,
-    "auth": {
-      "gh": true,
-      "git": true
-    },
-    "enabled": true,
-    "sandboxLspServers": true,
+    "enabled": false,
     "sandboxMcpServers": true,
+    "sandboxLspServers": true,
+    "allowBypass": true,
+    "auth": {
+      "git": true,
+      "gh": true
+    },
+    "allowDevToolAccess": true,
+    "addCurrentWorkingDirectory": true,
     "userPolicy": {
       "filesystem": {
         "deniedPaths": [],
@@ -54,6 +60,8 @@
           "/home/merutest",
           "/home/thkawcha/tmp",
           "/home/merutest/tmp",
+          "/home/thkawcha/tmp/copilot-uv-cache",
+          "/home/merutest/tmp/copilot-uv-cache",
           "/tmp",
           "/home/thkawcha/latest-release-packages",
           "/home/merutest/latest-release-packages",
@@ -83,21 +91,14 @@
   },
   "screenReader": false,
   "showReasoning": true,
-  "theme": "auto",
-  "model": "gpt-6-luna",
-  "planModel": "gpt-6.1-sol",
-  "planEffortLevel": "extra high",
-  "planContextTier": "long_context",
-  "includeCoAuthoredBy": false,
-  "voice": {
-    "enabled": true,
-    "selectedModel": "nemotron-3.5-asr-streaming-0.6b-generic-cpu:3"
-  },
   "subagents": {
+    "contextManagementTools": false,
     "maxConcurrency": 5,
-    "maxDepth": 2,
-    "contextManagementTools": false
+    "maxDepth": 2
   },
-  "contextTier": "default",
-  "editorMode": "normal"
+  "theme": "auto",
+  "voice": {
+    "enabled": false,
+    "selectedModel": "nemotron-3.5-asr-streaming-0.6b-generic-cpu:3"
+  }
 }
