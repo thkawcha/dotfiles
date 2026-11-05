@@ -16,6 +16,7 @@ Resolve the script from the personal skill directory:
 ```bash
 PR_CI_MONITOR="$HOME/.copilot/skills/pr-ci-monitor/pr_ci_monitor_cli.py"
 uv run --script "$PR_CI_MONITOR" watch \
+  --repository microsoft/meru-core \
   --pr-number <pr> --build-id <build> --head-sha <head> \
   --base-ref <base-ref> --base-sha <base-sha> \
   --merge-sha <merge> [--deadline <ISO8601>]
@@ -25,12 +26,23 @@ The default cadence is two minutes, with a one-minute minimum override; the defa
 deadline is two hours from start unless the user provides one. Use `--once` for one
 SDK observation without an ongoing watch. Other options are documented by `watch --help`.
 
+`--repository` defaults to `microsoft/meru-core`. It also accepts
+`microsoft/meru-common`, `microsoft/meru-federation`, and `microsoft/meru-rc`,
+enforcing `common-ci`, `federation-ci`, and `rc-ci` respectively. These additional
+pipelines are read-only observations, not automatic-retry targets.
+
+With `--until-merged`, CI success emits `awaiting_merge` and observation continues
+until GitHub confirms that the exact expected PR head merged into the expected
+base branch. Closing without merging, CI failure, cancellation, revision drift,
+and the deadline still stop the watch. This option never enables auto-merge.
+
 ## Ownership and outcomes
 
 Run an ongoing watch as an attached background process and confirm its first JSON
 observation. Record its handle and deadline; do not install a daemon. The helper
-observes one already-associated `microsoft/meru-core` `core-ci` build and stops on
-completion, deadline, cancellation, association errors, or head/base/merge drift.
+observes one already-associated repository/pipeline pair and stops on completion
+(or merge with `--until-merged`), deadline, cancellation, association errors, or
+head/base/merge drift.
 
 Build discovery, diagnosis, comments, retry decisions, and durable state remain
 with the skill. Feed failures into the shared diagnosis policy; a helper result

@@ -43,6 +43,8 @@ class ReaderTests(unittest.TestCase):
                         head=SimpleNamespace(sha="head"),
                         base=base,
                         merge_commit_sha="merge",
+                        merged=False,
+                        merged_at=None,
                     )
                 )
                 reader = monitor.GithubPullReader()
@@ -52,6 +54,16 @@ class ReaderTests(unittest.TestCase):
                     reader.close()
                 self.assertEqual(result["baseRef"], base.ref if base else None)
                 self.assertEqual(result["baseSha"], base.sha if base else None)
+                self.assertFalse(result["merged"])
+
+    def test_github_reader_uses_selected_repository(self):
+        with (
+            patch.dict(os.environ, {"GH_TOKEN": "unit-test-token"}),
+            patch.object(monitor, "Github") as github,
+        ):
+            reader = monitor.GithubPullReader("microsoft/meru-common")
+            reader.close()
+            github.return_value.get_repo.assert_called_once_with("microsoft/meru-common")
 
     def test_build_reader_includes_repository_identity(self):
         for repository in (
@@ -80,6 +92,8 @@ class ReaderTests(unittest.TestCase):
 class ObservationTests(unittest.TestCase):
     def setUp(self):
         self.args = argparse.Namespace(
+            repository=monitor.REPOSITORY,
+            until_merged=False,
             pr_number=1,
             build_id=2,
             head_sha="head",
@@ -94,6 +108,8 @@ class ObservationTests(unittest.TestCase):
             "baseRef": "main",
             "baseSha": "base",
             "mergeSha": "merge",
+            "merged": False,
+            "mergedAt": None,
         }
         self.build = {
             "definition": {"name": monitor.PIPELINE},
@@ -193,6 +209,50 @@ class ObservationTests(unittest.TestCase):
                 _, code = self.observe()
                 self.assertEqual(code, monitor.EXIT_ASSOCIATION_ERROR)
 
+    def test_selected_repository_requires_its_matching_pipeline(self):
+        for repository, pipeline in monitor.REPOSITORY_PIPELINES.items():
+            with self.subTest(repository=repository):
+                self.args.repository = repository
+                self.build["repository"]["name"] = repository
+                self.build["definition"]["name"] = pipeline
+                observation, code = self.observe()
+                self.assertIsNone(code)
+                self.assertEqual(observation["expected"]["repository"], repository)
+                self.assertEqual(observation["expected"]["pipeline"], pipeline)
+                self.build["definition"]["name"] = "wrong-ci"
+                _, code = self.observe()
+                self.assertEqual(code, monitor.EXIT_ASSOCIATION_ERROR)
+
+    def test_until_merged_waits_after_success_but_stops_on_failure(self):
+        self.args.until_merged = True
+        for result, outcome, expected_code in (
+            ("succeeded", "awaiting_merge", None),
+            ("failed", "failed", monitor.EXIT_FAILED),
+            ("canceled", "canceled", monitor.EXIT_STOPPED),
+        ):
+            with self.subTest(result=result):
+                self.build.update(status="completed", result=result)
+                observation, code = self.observe()
+                self.assertEqual(observation["outcome"], outcome)
+                self.assertEqual(code, expected_code)
+
+    def test_until_merged_requires_confirmed_merge_of_expected_head(self):
+        self.args.until_merged = True
+        self.pr.update(state="CLOSED", merged=True, mergeSha="squashed-commit")
+        observation, code = self.observe()
+        self.assertEqual(observation["outcome"], "merged")
+        self.assertEqual(code, 0)
+        self.build_reader.read.assert_not_called()
+        for changes in (
+            {"headSha": "other-head"},
+            {"merged": False},
+            {"baseRef": "other-branch"},
+        ):
+            with self.subTest(changes=changes):
+                self.github_reader.read.return_value = self.pr | changes
+                _, code = self.observe()
+                self.assertEqual(code, monitor.EXIT_STOPPED)
+
     def test_build_outcomes_are_preserved(self):
         for status, result, outcome, expected_code in (
             ("notStarted", None, "running", None),
@@ -246,6 +306,17 @@ class ParserTests(unittest.TestCase):
                     args = parser.parse_args(argv)
                     self.assertEqual(args.base_ref, "main")
                     self.assertEqual(args.base_sha, "base")
+                    self.assertEqual(args.repository, monitor.REPOSITORY)
+                    self.assertFalse(args.until_merged)
+
+    def test_repository_and_merge_wait_options(self):
+        args = monitor.build_parser().parse_args([
+            "watch", "--repository", "microsoft/meru-rc", "--until-merged",
+            "--pr-number", "1", "--build-id", "2", "--head-sha", "head",
+            "--base-ref", "main", "--base-sha", "base", "--merge-sha", "merge",
+        ])
+        self.assertEqual(args.repository, "microsoft/meru-rc")
+        self.assertTrue(args.until_merged)
 
 
 if __name__ == "__main__":

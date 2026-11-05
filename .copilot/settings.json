@@ -100,5 +100,6 @@
   "voice": {
     "enabled": false,
     "selectedModel": "nemotron-3.5-asr-streaming-0.6b-generic-cpu:3"
-  }
+  },
+  "autoUpdatesChannel": "stable"
 }

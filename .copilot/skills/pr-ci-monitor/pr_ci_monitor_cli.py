@@ -12,8 +12,8 @@
 # Licensed under the MIT License.
 """Read-only bounded watcher for the personal `pr-ci-monitor` Copilot skill.
 
-The helper observes one already-associated microsoft/meru-core PR core-ci build
-through the GitHub and Azure DevOps SDKs. It does not discover builds, diagnose
+The helper observes one already-associated Meru PR CI build, optionally until
+the PR merges, through the GitHub and Azure DevOps SDKs. It does not discover builds, diagnose
 failures, trigger builds, post comments, persist state, or own retry policy.
 Each observation is emitted as one JSON object on stdout.
 """
@@ -39,6 +39,12 @@ from msrest.exceptions import ClientRequestError
 
 REPOSITORY = "microsoft/meru-core"
 PIPELINE = "core-ci"
+REPOSITORY_PIPELINES = {
+    REPOSITORY: PIPELINE,
+    "microsoft/meru-common": "common-ci",
+    "microsoft/meru-federation": "federation-ci",
+    "microsoft/meru-rc": "rc-ci",
+}
 DEFAULT_ORG = os.environ.get("ADO_ORG_URL", "https://dev.azure.com/project-meru")
 DEFAULT_PROJECT = os.environ.get("ADO_PROJECT", "eng")
 MIN_POLL_SECONDS = 60
@@ -83,7 +89,8 @@ def parse_deadline(value: str) -> datetime:
 class GithubPullReader:
     """Read the current state and head/base/merge revisions for one GitHub PR."""
 
-    def __init__(self) -> None:
+    def __init__(self, repository: str = REPOSITORY) -> None:
+        self._repository_name = repository
         token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         if not token:
             die(
@@ -93,10 +100,10 @@ class GithubPullReader:
             )
         self._github = Github(auth=Auth.Token(token), timeout=60, retry=2)
         try:
-            self._repository = self._github.get_repo(REPOSITORY)
+            self._repository = self._github.get_repo(repository)
         except GithubException as error:
             die(
-                f"Failed to open GitHub repository {REPOSITORY}: {error}",
+                f"Failed to open GitHub repository {repository}: {error}",
                 EXIT_GITHUB_ERROR,
             )
 
@@ -111,9 +118,11 @@ class GithubPullReader:
             base_ref = pull.base.ref if pull.base else None
             base_sha = pull.base.sha if pull.base else None
             merge_sha = pull.merge_commit_sha
+            merged = pull.merged
+            merged_at = str(pull.merged_at) if pull.merged_at else None
         except GithubException as error:
             die(
-                f"Failed to read {REPOSITORY} PR #{pr_number}: {error}",
+                f"Failed to read {self._repository_name} PR #{pr_number}: {error}",
                 EXIT_GITHUB_ERROR,
             )
 
@@ -123,6 +132,8 @@ class GithubPullReader:
             "baseRef": base_ref,
             "baseSha": base_sha,
             "mergeSha": merge_sha,
+            "merged": merged,
+            "mergedAt": merged_at,
         }
 
 
@@ -197,7 +208,7 @@ def base_observation(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "event": "observation",
         "timestamp": utc_timestamp(),
-        "repository": REPOSITORY,
+        "repository": args.repository,
         "prNumber": args.pr_number,
         "buildId": args.build_id,
         "deadline": utc_timestamp(args.deadline),
@@ -206,8 +217,8 @@ def base_observation(args: argparse.Namespace) -> dict[str, Any]:
             "baseRef": args.base_ref,
             "baseSha": args.base_sha,
             "mergeSha": args.merge_sha,
-            "repository": REPOSITORY,
-            "pipeline": PIPELINE,
+            "repository": args.repository,
+            "pipeline": REPOSITORY_PIPELINES[args.repository],
             "sourceBranch": f"refs/pull/{args.pr_number}/merge",
         },
     }
@@ -231,16 +242,26 @@ def observe(
         "baseRef": base_ref,
         "baseSha": base_sha,
         "mergeSha": merge_sha,
+        "merged": pr.get("merged", False),
+        "mergedAt": pr.get("mergedAt"),
     }
-
-    if state != "OPEN":
-        observation["outcome"] = "pr_not_open"
-        observation["reason"] = f"PR state is {state!r}"
-        return observation, EXIT_STOPPED
 
     if head_sha != args.head_sha:
         observation["outcome"] = "revision_changed"
         observation["reason"] = f"PR head changed from {args.head_sha} to {head_sha}"
+        return observation, EXIT_STOPPED
+
+    if state != "OPEN":
+        if (
+            args.until_merged
+            and state == "CLOSED"
+            and pr.get("merged")
+            and base_ref == args.base_ref
+        ):
+            observation["outcome"] = "merged"
+            return observation, 0
+        observation["outcome"] = "pr_not_open"
+        observation["reason"] = f"PR state is {state!r}"
         return observation, EXIT_STOPPED
 
     if base_ref != args.base_ref or base_sha != args.base_sha:
@@ -275,9 +296,9 @@ def observe(
     expected_branch = f"refs/pull/{args.pr_number}/merge"
     if (
         not isinstance(repository_name, str)
-        or repository_name.casefold() != REPOSITORY.casefold()
+        or repository_name.casefold() != args.repository.casefold()
         or repository_type != "GitHub"
-        or pipeline != PIPELINE
+        or pipeline != REPOSITORY_PIPELINES[args.repository]
         or source_branch != expected_branch
         or source_version != args.merge_sha
     ):
@@ -318,6 +339,9 @@ def observe(
         return observation, EXIT_UNKNOWN_RESULT
 
     observation["outcome"], exit_code = outcome
+    if result == "succeeded" and args.until_merged:
+        observation["outcome"] = "awaiting_merge"
+        return observation, None
     return observation, exit_code
 
 
@@ -348,7 +372,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
         emit(deadline_event(args))
         return EXIT_DEADLINE
 
-    github_reader = GithubPullReader()
+    github_reader = GithubPullReader(args.repository)
     build_reader = AzureBuildReader()
     try:
         while True:
@@ -377,15 +401,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pr_ci_monitor_cli.py",
         description=(
-            "Read one already-associated microsoft/meru-core PR core-ci build "
-            "through native SDKs until it completes or its association changes."
+            "Read one already-associated Meru PR CI build through native SDKs "
+            "until completion or merge, association changes, or deadline."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     watch = subparsers.add_parser(
         "watch",
-        help="Watch one core-ci build until completion, revision drift, or deadline.",
+        help="Watch one PR CI build until completion, merge, drift, or deadline.",
+    )
+    watch.add_argument(
+        "--repository", choices=REPOSITORY_PIPELINES, default=REPOSITORY,
+        help="GitHub repository; its matching CI pipeline is enforced.",
+    )
+    watch.add_argument(
+        "--until-merged", action="store_true",
+        help="Continue after CI success until this exact PR head merges.",
     )
     watch.add_argument("--pr-number", type=int, required=True)
     watch.add_argument("--build-id", type=int, required=True)
