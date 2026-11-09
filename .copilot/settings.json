@@ -38,16 +38,16 @@
   "planModel": "gpt-6.1-sol",
   "renderMarkdown": true,
   "sandbox": {
-    "enabled": false,
-    "sandboxMcpServers": true,
-    "sandboxLspServers": true,
-    "allowBypass": true,
-    "auth": {
-      "git": true,
-      "gh": true
-    },
-    "allowDevToolAccess": true,
     "addCurrentWorkingDirectory": true,
+    "allowBypass": true,
+    "allowDevToolAccess": true,
+    "auth": {
+      "gh": true,
+      "git": true
+    },
+    "enabled": false,
+    "sandboxLspServers": true,
+    "sandboxMcpServers": true,
     "userPolicy": {
       "filesystem": {
         "deniedPaths": [],

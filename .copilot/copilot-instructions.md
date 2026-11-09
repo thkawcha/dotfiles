@@ -80,10 +80,9 @@ Azure CLI detects `CODESPACES=true` and forces device code flow even when the VS
   dependencies.
 - Never initialize Meru submodules recursively. Recursive checkout creates
   redundant nested Meru worktrees and pulls unnecessary dependency trees.
-- Initialize top-level submodules from the repository root with
-  `git submodule update --init`.
-- The only supported nested checkout is the networking dependency set:
-  `git -C ext/net/deps submodule update --init`.
-- Alternatively, after `ext/build-infra` is available, run
+- Use the shared checkout helper as the central checkout entry point. From the
+  repository root, bootstrap it with
+  `git submodule update --init ext/build-infra`, then run
   `bash ext/build-infra/devcontainer-features/meru-devcontainer-ubuntu/scripts/checkout-submodules.sh`.
-  It initializes the top level and only `ext/net/deps`.
+  The helper owns the checkout policy and initializes only top-level submodules;
+  no nested net or DPDK checkout is needed.

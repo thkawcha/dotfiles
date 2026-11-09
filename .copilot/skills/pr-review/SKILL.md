@@ -57,8 +57,10 @@ intent, linked work, related PRs, or cross-repository evidence.
    warning and review limitation, not proof that the implementation is wrong.
 3. Treat `.gitmodules` as the source of truth for top-level dependency repositories.
    Search the current repository and those repositories for related open PRs and
-   PRs active in the preceding 90 days. Do not initialize submodules recursively
-   or fetch missing source merely to perform a search.
+   PRs active in the preceding 90 days. Nested net and DPDK checkouts are not
+   required. Do not initialize submodules or fetch missing source merely to
+   perform a search; checkout policy belongs to the shared
+   `checkout-submodules.sh` helper, not the review skill.
 4. Derive search terms from linked work, changed components, public symbols,
    configuration keys, and distinctive behavior. A title or shared generic word
    alone is not evidence that another PR is related.
