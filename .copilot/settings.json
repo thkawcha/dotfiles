@@ -24,8 +24,9 @@
   ],
   "bashEnv": true,
   "companyAnnouncements": [
+    "GPT-5.6 Sol, Terra, and Luna are now available in Copilot CLI. Try them from the model picker.",
     "Need help with Agency? In a local Agency session, use `/agency:agency-support`; otherwise run `agency support` or join the support community: https://aka.ms/agency/support"
-  ],
+  ]
   "contextTier": "default",
   "disabledSkills": [],
   "editorMode": "normal",
