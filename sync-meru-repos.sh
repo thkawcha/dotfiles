@@ -48,6 +48,19 @@ for repo in "$REPO_ROOT"/meru-*/; do
         continue
     fi
 
+    if ! git_dir=$(git rev-parse --git-dir) ||
+        ! common_dir=$(git rev-parse --git-common-dir); then
+        echo "  ✗ could not inspect Git directories" >&2
+        failed+=("$name")
+        continue
+    fi
+
+    if [ "$git_dir" != "$common_dir" ]; then
+        echo "  Skipping linked worktree"
+        echo ""
+        continue
+    fi
+
     ok=true
     # --force/--prune-tags so a tag that was moved or deleted on the remote
     # (e.g. "would clobber existing tag") updates cleanly instead of failing
