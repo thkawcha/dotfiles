@@ -42,6 +42,8 @@ These are the most constrained development environments. They do have access to 
 
 When in WSL, do not attempt to start docker. Prompt the user to start it instead.
 
+Do not run clang-tidy in WSL, including as part of tidy builds.
+
 Meru clusters cannot run in WSL so you do not need to check for existence before running builds and other commands. You also will not be able to deploy clusters there right now.
 
 ## Commit Signing

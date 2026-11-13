@@ -22,11 +22,13 @@
     "https://packagefeedproxy.microsoft.io",
     "http://meru-build-cache.guest.corp.microsoft.com:9090"
   ],
+  "autoUpdatesChannel": "stable",
   "bashEnv": true,
   "companyAnnouncements": [
-    "GPT-5.6 Sol, Terra, and Luna are now available in Copilot CLI. Try them from the model picker.",
-    "Need help with Agency? In a local Agency session, use `/agency:agency-support`; otherwise run `agency support` or join the support community: https://aka.ms/agency/support"
-  ]
+    "Review the models available to you and options to request additional model access at https://aka.ms/copilot/models",
+    "Need help with Agency? In a local Agency session, use `/agency:agency-support`; otherwise run `agency support` or join the support community: https://aka.ms/agency/support",
+    "Monthly limits are in place. Burst limit increases and guidance are available at https://aka.ms/copilot/burst"
+  ],
   "contextTier": "default",
   "disabledSkills": [],
   "editorMode": "normal",
@@ -101,6 +103,5 @@
   "voice": {
     "enabled": false,
     "selectedModel": "nemotron-3.5-asr-streaming-0.6b-generic-cpu:3"
-  },
-  "autoUpdatesChannel": "stable"
+  }
 }
